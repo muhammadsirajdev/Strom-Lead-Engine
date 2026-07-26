@@ -4,6 +4,9 @@
 
 DROP TABLE IF EXISTS tracking CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
+-- gmail_credentials is intentionally NOT dropped here: this file is replayed
+-- wholesale by db/generate_data.py to reseed synthetic customers/tracking,
+-- and that reseed must not blow away a connected Gmail account's refresh token.
 
 CREATE TABLE customers (
     customer_id       INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -42,3 +45,17 @@ CREATE TABLE tracking (
 
 -- thread_id's UNIQUE constraint above already creates its index.
 CREATE INDEX idx_tracking_status ON tracking (status);
+
+-- Google OAuth tokens for the Gmail account(s) the sender agent sends from.
+-- One row per connected mailbox; refresh_token is long-lived and is what lets
+-- the agent mint new access tokens later without a human back in the loop.
+CREATE TABLE IF NOT EXISTS gmail_credentials (
+    id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    access_token  TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    token_expiry  TIMESTAMPTZ NOT NULL,
+    scope         TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
