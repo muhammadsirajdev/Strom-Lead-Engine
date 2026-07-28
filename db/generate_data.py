@@ -72,9 +72,13 @@ INSURERS = [
     "State Farm", "Allstate", "USAA", "Farmers", "Liberty Mutual",
     "Progressive", "Nationwide", "Travelers",
 ]
+# Non-terminal: awaiting_reply, interested, not_interested (Run B keeps polling).
+# Terminal: booked, no_response, unsubscribed (Run B stops watching).
 TRACKING_STATUSES = [
-    ("awaiting_reply", 0.45), ("replied", 0.25), ("booked", 0.15), ("no_response", 0.15),
+    ("awaiting_reply", 0.40), ("interested", 0.12), ("not_interested", 0.13),
+    ("booked", 0.15), ("no_response", 0.15), ("unsubscribed", 0.05),
 ]
+NO_REPLY_YET_STATUSES = {"awaiting_reply", "no_response"}
 
 
 def weighted_choice(rng, pairs):
@@ -159,18 +163,27 @@ def gen_tracking(rng, customer_ids_zips, fraction):
         status = weighted_choice(rng, TRACKING_STATUSES)
         created_at = storm_date + timedelta(hours=rng.randint(1, 12))
 
+        # processed_message_count mirrors what Run B would have seen: still 1
+        # (just the outbound send) if nothing came back yet, 2-3 if the
+        # customer has replied at least once.
+        if status in NO_REPLY_YET_STATUSES:
+            processed_message_count = 1
+        else:  # interested, not_interested, booked, unsubscribed
+            processed_message_count = rng.choice([2, 2, 3])
+
         if status == "no_response":
             nudge_count = 1
             last_contacted_at = created_at + timedelta(days=rng.randint(8, 14))
         elif status == "awaiting_reply":
             nudge_count = rng.choice([0, 1])
             last_contacted_at = created_at + timedelta(days=rng.randint(0, 3))
-        else:  # replied, booked
+        else:  # interested, not_interested, booked, unsubscribed
             nudge_count = rng.choice([0, 0, 1])
             last_contacted_at = created_at + timedelta(days=rng.randint(0, 6))
 
         rows.append(
-            (customer_id, thread_id, storm_context, status, nudge_count, last_contacted_at, created_at)
+            (customer_id, thread_id, storm_context, status, processed_message_count,
+             nudge_count, last_contacted_at, created_at)
         )
     return rows
 
@@ -212,9 +225,9 @@ def main():
             cur.executemany(
                 """
                 INSERT INTO tracking (
-                    customer_id, thread_id, storm_context, status, nudge_count,
-                    last_contacted_at, created_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    customer_id, thread_id, storm_context, status, processed_message_count,
+                    nudge_count, last_contacted_at, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 tracking_rows,
             )
