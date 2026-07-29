@@ -1,0 +1,166 @@
+@import "@fontsource-variable/inter";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens.
+ *
+ * Dark is the primary mode (it ships on <html class="dark">); light is a
+ * selected companion, re-stepped for its own surface rather than an inverted
+ * flip of the dark values.
+ *
+ * The chart ramp is an *ordinal* single-hue blue ramp, chosen so the funnel
+ * encodes magnitude without spending categorical hues, and validated against
+ * each mode's real surface:
+ *   dark  (surface #18181b): #86b6ef #3987e5 #256abf #184f95
+ *   light (surface #fafafa): #86b6ef #3987e5 #256abf #104281
+ * Both pass monotone lightness, >=0.06 adjacent lightness gaps, single-hue
+ * spread (3 deg), and >=2:1 contrast for the step nearest the surface.
+ *
+ * Status hues deliberately avoid the accent/chart blue so a lifecycle state
+ * can never be mistaken for a data series. Statuses are always rendered with
+ * a lucide icon plus a text label -- color never carries the meaning alone.
+ */
+@layer base {
+  :root {
+    /* Light mode ------------------------------------------------------- */
+    --page: 0 0% 98%; /* #fafafa */
+    --surface: 0 0% 100%;
+    --surface-raised: 0 0% 100%;
+    --surface-inset: 240 5% 96%;
+
+    --line: 240 6% 90%; /* zinc-200 */
+    --line-strong: 240 5% 84%;
+
+    --ink: 240 6% 10%; /* zinc-900 */
+    --ink-secondary: 240 4% 34%; /* zinc-600 */
+    --ink-muted: 240 4% 46%; /* zinc-500 */
+
+    --accent: 212 68% 50%; /* #2a78d6 */
+    --accent-hover: 212 72% 44%;
+    --accent-soft: 212 74% 94%;
+    --accent-ink: 0 0% 100%;
+
+    --chart-1: 212 74% 73%; /* #86b6ef */
+    --chart-2: 212 76% 56%; /* #3987e5 */
+    --chart-3: 212 68% 45%; /* #256abf */
+    --chart-4: 212 78% 28%; /* #104281 */
+
+    --status-awaiting: 42 96% 42%;
+    --status-interested: 246 58% 52%;
+    --status-booked: 120 86% 28%;
+    --status-declined: 18 62% 48%;
+    --status-silent: 45 4% 44%;
+    --status-unsubscribed: 0 60% 46%;
+
+    --severity-severe: 0 60% 46%;
+    --severity-elevated: 42 96% 40%;
+    --severity-calm: 120 40% 34%;
+    --severity-unknown: 240 4% 46%;
+
+    --shadow: 240 20% 20%;
+  }
+
+  .dark {
+    /* Dark mode (primary) --------------------------------------------- */
+    --page: 240 10% 4%; /* #09090b, zinc-950 */
+    --surface: 240 6% 10%; /* #18181b, zinc-900 -- the validated surface */
+    --surface-raised: 240 6% 13%;
+    --surface-inset: 240 6% 8%;
+
+    --line: 240 4% 16%; /* zinc-800 */
+    --line-strong: 240 5% 26%; /* zinc-700 */
+
+    --ink: 0 0% 98%; /* zinc-50 */
+    --ink-secondary: 240 5% 65%; /* zinc-400 */
+    --ink-muted: 240 4% 46%; /* zinc-500 */
+
+    --accent: 212 76% 56%; /* #3987e5 */
+    --accent-hover: 212 78% 64%;
+    --accent-soft: 212 76% 16%;
+    --accent-ink: 0 0% 100%;
+
+    /* Ordinal ramp, brightest = largest stage on a dark surface. */
+    --chart-1: 212 74% 73%; /* #86b6ef */
+    --chart-2: 212 76% 56%; /* #3987e5 */
+    --chart-3: 212 68% 45%; /* #256abf */
+    --chart-4: 212 72% 34%; /* #184f95 */
+
+    --status-awaiting: 42 96% 54%; /* #fab219 */
+    --status-interested: 246 68% 72%; /* #9085e9 */
+    --status-booked: 120 86% 34%; /* #0ca30c */
+    --status-declined: 18 79% 64%; /* #ec835a */
+    --status-silent: 45 4% 52%; /* #898781 */
+    --status-unsubscribed: 0 60% 52%; /* #d03b3b */
+
+    --severity-severe: 0 60% 52%;
+    --severity-elevated: 42 96% 54%;
+    --severity-calm: 120 40% 48%;
+    --severity-unknown: 240 4% 46%;
+
+    --shadow: 0 0% 0%;
+  }
+
+  * {
+    @apply border-line;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-page text-ink antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* One consistent focus treatment across every interactive element. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/70 ring-offset-2 ring-offset-page;
+  }
+
+  ::selection {
+    @apply bg-accent/30;
+  }
+}
+
+@layer utilities {
+  /* Columns of digits that must line up (table cells, axis ticks). Never on
+     large standalone figures -- tabular digits make big numbers read loose. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hairline-grid {
+    background-image: linear-gradient(hsl(var(--line) / 0.7) 1px, transparent 1px);
+  }
+
+  /* Scrollbars that don't shout on a dark surface. */
+  .scroll-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--line-strong)) transparent;
+  }
+
+  .scroll-subtle::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+
+  .scroll-subtle::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--line-strong));
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+
+  .scroll-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
