@@ -13,6 +13,7 @@ right after targeting instead of drafting anything.
 
 Usage:
     uv run python lead_find_agent.py <city> [<city> ...]
+    uv run python lead_find_agent.py --review   # resolve any runs paused at human_review
 """
 
 import asyncio
@@ -36,6 +37,8 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, model_validator
 
 from mcp_client import build_checkpointer, build_mcp_client, get_required_tools
+
+REQUIRED_TOOLS = ["get_current_weather", "gmail_send_email"]
 
 WIND_THRESHOLD_MPH = 50.0
 
@@ -472,10 +475,60 @@ async def ensure_tracking_table() -> None:
             await cur.execute(ddl)
 
 
+# ---------------------------------------------------------------------------
+# Pending-review ledger
+#
+# A scheduled run (see scheduler.py) can't block on interactive input, so it
+# only ever kicks a run off (see run_once). If that run pauses at
+# human_review, its thread_id is recorded here so a later `--review` pass
+# (run anytime, by a human) can find and resolve it. Nothing sends until
+# that happens -- this ledger is purely a "what's waiting on me" index, not
+# a second source of truth for review state (the checkpointer already has
+# that).
+# ---------------------------------------------------------------------------
+
+
+async def ensure_pending_review_table() -> None:
+    """Idempotent: creates `run_a_pending_review` if it's missing. Safe to
+    call on every run."""
+    ddl = """
+        CREATE TABLE IF NOT EXISTS run_a_pending_review (
+            thread_id      TEXT PRIMARY KEY,
+            service_cities TEXT[] NOT NULL,
+            created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+    """
+    async with await psycopg.AsyncConnection.connect(os.environ["DATABASE_URL"]) as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(ddl)
+
+
+async def _record_pending_review(thread_id: str, service_cities: list[str]) -> None:
+    async with await psycopg.AsyncConnection.connect(os.environ["DATABASE_URL"], autocommit=True) as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "INSERT INTO run_a_pending_review (thread_id, service_cities) VALUES (%s, %s) "
+                "ON CONFLICT (thread_id) DO NOTHING",
+                (thread_id, service_cities),
+            )
+
+
+async def _clear_pending_review(thread_id: str) -> None:
+    async with await psycopg.AsyncConnection.connect(os.environ["DATABASE_URL"], autocommit=True) as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM run_a_pending_review WHERE thread_id = %s", (thread_id,))
+
+
+async def _list_pending_reviews() -> list[dict]:
+    async with await psycopg.AsyncConnection.connect(os.environ["DATABASE_URL"], row_factory=dict_row) as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("SELECT thread_id, service_cities, created_at FROM run_a_pending_review ORDER BY created_at")
+            return await cur.fetchall()
+
+
 def build_graph(tools: dict, checkpointer):
     """Wires the five StormLead Run-A nodes into a compiled, checkpointed
-    graph. `tools` must contain `get_current_weather` and `gmail_send_email`
-    (see main()'s `get_required_tools` call).
+    graph. `tools` must contain every name in REQUIRED_TOOLS.
     """
     get_current_weather = tools["get_current_weather"]
     gmail_send_email = tools["gmail_send_email"]
@@ -605,22 +658,75 @@ def collect_review_decisions(pending_drafts: list[dict]) -> dict:
     return {str(draft["customer_id"]): _prompt_decision(draft) for draft in pending_drafts}
 
 
-async def main() -> None:
-    cities = sys.argv[1:] or [input("City to check for storms: ").strip()]
+async def run_once(graph, service_cities: list[str]) -> tuple[dict, str]:
+    """Kicks off one Run A pass for `service_cities` and returns immediately
+    -- does not block on interactive review. If the run pauses at
+    human_review, the thread is recorded in `run_a_pending_review` for a
+    later `--review` pass (interactive, run by a human) to resolve; nothing
+    sends until then. Used by both main()'s fresh-run path and by
+    scheduler.py's unattended daily job.
+    """
+    thread_id = str(uuid.uuid4())
+    config = {"configurable": {"thread_id": thread_id}}
+    result = await graph.ainvoke({"service_cities": service_cities}, config)
+    if "__interrupt__" in result:
+        await _record_pending_review(thread_id, service_cities)
+    return result, thread_id
 
-    client = build_mcp_client()
-    tools = await get_required_tools(client, ["get_current_weather", "gmail_send_email"])
-    await ensure_tracking_table()
-    checkpointer = await build_checkpointer()
-    graph = build_graph(tools, checkpointer)
 
-    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-    result = await graph.ainvoke({"service_cities": cities}, config)
-
+async def _resolve_review_loop(graph, thread_id: str, result: dict) -> dict:
+    """Runs the CLI approve/reject/rewrite loop until no draft is left
+    pending, then clears the thread's pending-review record. Shared by a
+    fresh interactive run and `--review`'s resume of an earlier paused run.
+    """
+    config = {"configurable": {"thread_id": thread_id}}
     while "__interrupt__" in result:
         pending_payload = result["__interrupt__"][0].value
         decisions = collect_review_decisions(pending_payload["drafts"])
         result = await graph.ainvoke(Command(resume=decisions), config)
+
+    await _clear_pending_review(thread_id)
+    return result
+
+
+async def review_pending_runs(graph) -> None:
+    """`--review` mode: resumes every thread left paused at human_review --
+    whether it was started interactively and interrupted (e.g. terminal
+    closed mid-review) or kicked off unattended by scheduler.py -- and walks
+    through the same approve/reject/rewrite CLI as a fresh run.
+    """
+    pending = await _list_pending_reviews()
+    if not pending:
+        print("No runs awaiting review.")
+        return
+
+    for row in pending:
+        thread_id = row["thread_id"]
+        print(f"\n=== Resuming thread {thread_id} (cities: {row['service_cities']}) ===")
+        config = {"configurable": {"thread_id": thread_id}}
+        result = await graph.ainvoke(None, config)
+        result = await _resolve_review_loop(graph, thread_id, result)
+
+        print("sent:", result.get("sent"))
+        if result.get("errors"):
+            print("errors:", result["errors"])
+
+
+async def main() -> None:
+    client = build_mcp_client()
+    tools = await get_required_tools(client, REQUIRED_TOOLS)
+    await ensure_tracking_table()
+    await ensure_pending_review_table()
+    checkpointer = await build_checkpointer()
+    graph = build_graph(tools, checkpointer)
+
+    if sys.argv[1:2] == ["--review"]:
+        await review_pending_runs(graph)
+        return
+
+    cities = sys.argv[1:] or [input("City to check for storms: ").strip()]
+    result, thread_id = await run_once(graph, cities)
+    result = await _resolve_review_loop(graph, thread_id, result)
 
     print("\nqualifying_cities:", result.get("qualifying_cities"))
     print("sent:", result.get("sent"))
