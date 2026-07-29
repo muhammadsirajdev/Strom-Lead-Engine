@@ -8,6 +8,21 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Recharts (with its d3 dependencies) and framer-motion together are
+        // most of the bundle and change far less often than app code, so they
+        // get their own long-cached chunks instead of one 1 MB blob.
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          charts: ["recharts"],
+          motion: ["framer-motion"],
+          query: ["@tanstack/react-query", "@tanstack/react-table"],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     // The typed API client calls relative "/api/..." paths, so the dev server
