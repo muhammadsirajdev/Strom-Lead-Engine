@@ -42,6 +42,11 @@ class Settings:
         # How many rows /api/leads will return at most.
         self.leads_hard_limit: int = int(os.getenv("DASHBOARD_LEADS_LIMIT", "1000"))
 
+        # Only consulted by `python -m backend.main`'s __main__ block below --
+        # override when 8000 is already taken on the host.
+        self.host: str = os.getenv("DASHBOARD_HOST", "127.0.0.1")
+        self.port: int = int(os.getenv("DASHBOARD_PORT", "8000"))
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

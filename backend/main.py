@@ -1,7 +1,8 @@
 """FastAPI application for the StormLead operations dashboard.
 
 Run from the project root:
-    uv run uvicorn backend.main:app --reload --port 8000
+    uv run python -m backend.main          # Windows-safe (see note below)
+    uv run uvicorn backend.main:app --reload --port 8000   # Linux/macOS
 
 Read-only over the pipeline's Postgres database. Interactive docs at /docs.
 """
@@ -17,6 +18,21 @@ from . import __version__, db
 from .config import get_settings
 from .routers import bookings, cities, leads, review_queue, stats
 from .schemas import HealthResponse
+
+# psycopg's async mode can't run on Windows' default ProactorEventLoop -- the
+# same constraint every pipeline entry point works around with
+# `asyncio.run(main(), loop_factory=asyncio.SelectorEventLoop)`.
+#
+# Setting `asyncio.set_event_loop_policy(...)` here at import time is *not*
+# enough to fix it, even though this module is imported before uvicorn's
+# event loop exists (`Config.load_app()` runs before `Server.run()`):
+# uvicorn's own loop selection (`loop="auto"`/`"asyncio"`) resolves to a
+# concrete loop_factory -- `asyncio.ProactorEventLoop` on win32 -- and passes
+# that explicitly to `asyncio.run(..., loop_factory=...)`, which overrides
+# whatever ambient policy is active. So the fix has to happen at the call
+# site, not at import time: see the `__main__` block below, which drives
+# `Server.serve()` inside our *own* `asyncio.run(loop_factory=...)` instead
+# of letting `uvicorn.run()`/`Server.run()` create the loop.
 
 
 @asynccontextmanager
@@ -86,9 +102,17 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
 
-    # psycopg's async mode can't run on Windows' default ProactorEventLoop --
-    # the same constraint every pipeline entry point works around.
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # No --reload here: uvicorn's reload supervisor restarts the server via
+    # its own Server.run(), which always goes through uvicorn's internal loop
+    # selection (ProactorEventLoop on win32) -- there's no way to keep our
+    # SelectorEventLoop fix once that supervisor is in the picture. This path
+    # drives Server.serve() inside our own asyncio.run() instead, exactly
+    # like every other entry point in this repo. For hot reload during
+    # frontend/backend development on Linux/macOS, use
+    # `uv run uvicorn backend.main:app --reload` instead.
+    settings = get_settings()
+    config = uvicorn.Config(app, host=settings.host, port=settings.port)
+    server = uvicorn.Server(config)
 
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+    loop_factory = asyncio.SelectorEventLoop if sys.platform == "win32" else None
+    asyncio.run(server.serve(), loop_factory=loop_factory)

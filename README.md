@@ -99,15 +99,22 @@ automated job in this repo sets it today.
 ├── db/
 │   ├── schema.sql                 # customers / tracking / gmail_credentials DDL
 │   └── generate_data.py           # synthetic customer + tracking seed data
+├── backend/                       # read-only FastAPI ops dashboard API -- see DASHBOARD.md
+├── frontend/                      # React + Vite ops dashboard UI -- see DASHBOARD.md
 ├── main.py                        # placeholder entry point from `uv init`, unused
 ├── pyproject.toml / uv.lock       # dependencies (authoritative -- see Setup)
 ├── .env.example                   # env var template, copy to .env
+├── DASHBOARD.md                   # ops dashboard: layout, run steps, endpoints
 └── README.md
 ```
 
 `requirements.txt` is a stale, pre-`uv` artifact (references packages no
 longer used, like `langchain-groq` and `fastapi`) -- `pyproject.toml` +
 `uv.lock` are what's actually installed and maintained.
+
+The pipeline itself (this README) is separate from the read-only **operations
+dashboard** (`backend/` + `frontend/`) that visualizes it -- see
+[DASHBOARD.md](DASHBOARD.md) for what it shows and how to run both halves.
 
 ## Prerequisites
 
