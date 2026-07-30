@@ -56,7 +56,7 @@ def create_app() -> FastAPI:
             "Backs the StormLead ops dashboard. Every endpoint is read-only -- the "
             "connection pool sets `default_transaction_read_only`, so writes are "
             "rejected by Postgres itself. Resolving a human review still happens "
-            "through `lead_find_agent.py --review`."
+            "through `uv run python -m agents.lead_find_agent --review`."
         ),
         lifespan=lifespan,
     )

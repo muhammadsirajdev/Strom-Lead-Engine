@@ -1,8 +1,10 @@
 """Custom MCP server exposing OpenWeather's current-weather endpoint as a tool.
 
-Run standalone for a quick check:
-    uv run python mcp_servers/weather_server.py
-Or launched by an MCP client over stdio (see notebook/weather_agent.ipynb).
+Launched over stdio as a subprocess by `agents.runtime.mcp_client` (by path,
+not as an import -- this module deliberately depends on nothing else in the
+package). Run it standalone for a quick check:
+
+    uv run python agents/mcp_servers/weather_server.py
 """
 
 import os

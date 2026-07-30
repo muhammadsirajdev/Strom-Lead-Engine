@@ -12,7 +12,7 @@ All read-only. Column names match the live database exactly:
   run_a_pending_review thread_id (PK), service_cities, created_at
 
 `triage_reason` and `scheduled_at` are added to `tracking` by
-send_booking_agent.py and notify_booking_with_team.py respectively, not by
+agents/send_booking_agent.py and agents/notify_booking_with_team.py respectively, not by
 db/schema.sql -- so they may be absent on a database where neither agent has
 run. `LEAD_COLUMNS` selects them defensively via to_jsonb so a missing column
 surfaces as NULL instead of a 500.
@@ -41,7 +41,7 @@ from .schemas import (
     StormSummary,
 )
 
-# close_stale_leads.py's STALE_AFTER_DAYS -- mirrored so the dashboard's
+# agents/close_stale_leads.py's STALE_AFTER_DAYS -- mirrored so the dashboard's
 # "stale" count predicts exactly what that job will close on its next run.
 STALE_AFTER_DAYS = 7
 
@@ -235,7 +235,7 @@ async def get_status_counts() -> dict[str, int]:
 def build_funnel(counts: dict[str, int]) -> list[FunnelStage]:
     """The four ordered stages a lead passes through, derived from status.
 
-    Every `tracking` row exists because lead_find_agent.py sent an email, so
+    Every `tracking` row exists because agents/lead_find_agent.py sent an email, so
     stage 1 is simply the row count. Each later stage is a subset of the one
     before it, which keeps the funnel monotonically non-increasing.
     """

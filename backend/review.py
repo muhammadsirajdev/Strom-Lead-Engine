@@ -30,7 +30,7 @@ from typing import Any
 from . import db, queries, storm
 from .schemas import ReviewDraft, ReviewQueue, ReviewThread, StormSummary
 
-# The state channel lead_find_agent.py's human_review node reads and writes.
+# The state channel agents/lead_find_agent.py's human_review node reads and writes.
 DRAFTS_CHANNEL = "drafts"
 
 PENDING_STATUS = "pending"

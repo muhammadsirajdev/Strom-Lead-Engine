@@ -13,10 +13,10 @@ Two subgraphs under one parent graph:
   `gmail_send_email`.
 
 This graph ends once invites go out. Checking whether a customer actually
-booked a slot, and notifying the team, is notify_booking_with_team.py.
+booked a slot, and notifying the team, is agents/notify_booking_with_team.py.
 
-Usage:
-    uv run python send_booking_agent.py [customer_id ...]
+Usage (from the project root):
+    uv run python -m agents.send_booking_agent [customer_id ...]
 """
 
 import asyncio
@@ -33,7 +33,7 @@ from langgraph.graph import END, START, StateGraph
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field
 
-from mcp_client import (
+from .runtime import (
     build_checkpointer,
     build_composio_calendly_agent,
     build_mcp_client,
@@ -77,7 +77,7 @@ class InviteState(TypedDict):
 
 async def ensure_triage_columns() -> None:
     """Idempotent migration for the one column Run B needs beyond what
-    lead_find_agent.py's ensure_tracking_table already creates on `tracking`
+    agents/lead_find_agent.py's ensure_tracking_table already creates on `tracking`
     (db/schema.sql). Safe to call on every run.
     """
     ddl = "ALTER TABLE tracking ADD COLUMN IF NOT EXISTS triage_reason TEXT;"
@@ -183,7 +183,7 @@ def build_graph(tools: dict, checkpointer):
 
     async def fetch_latest_reply(thread_id: str, processed_message_count: int) -> dict | None:
         """Reads the whole thread (thread_id == the original send's
-        messageId, per lead_find_agent.py's sender_agent) via
+        messageId, per agents/lead_find_agent.py's sender_agent) via
         gmail_read_email. Returns None if the thread hasn't grown since we
         last processed it, otherwise the newest message's body plus the
         thread's new total message count -- callers persist that count via

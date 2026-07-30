@@ -1,14 +1,14 @@
 """Closes stale leads: a DB maintenance pass over `tracking` (db/schema.sql).
 
-Any lead still sitting in 'awaiting_reply' -- emailed by lead_find_agent.py
+Any lead still sitting in 'awaiting_reply' -- emailed by agents/lead_find_agent.py
 but never replied to -- more than STALE_AFTER_DAYS days after last contact
 gets moved to 'no_response', the schema's terminal status for "contacted,
 never heard back" (see the status CHECK constraint and comment in
-db/schema.sql). Once closed, send_booking_agent.py's triage no longer polls
-that thread.
+db/schema.sql). Once closed, agents/send_booking_agent.py's triage no longer
+polls that thread.
 
-Usage:
-    uv run python close_stale_leads.py [stale_after_days]
+Usage (from the project root):
+    uv run python -m agents.close_stale_leads [stale_after_days]
 """
 
 import asyncio
@@ -16,10 +16,7 @@ import os
 import sys
 
 import psycopg
-from dotenv import load_dotenv
 from psycopg.rows import dict_row
-
-load_dotenv()
 
 STALE_AFTER_DAYS = 7
 

@@ -19,12 +19,13 @@ backend/
 ├── queries.py            # every SQL statement, joined to row -> schema mapping
 ├── review.py             # reads paused drafts out of the LangGraph checkpointer
 ├── schemas.py             # Pydantic response models
+├── scheduler.py            # NOT part of the API -- see below
 └── routers/
-    ├── stats.py           # GET /api/stats
-    ├── leads.py            # GET /api/leads, GET /api/leads/{lead_id}
-    ├── cities.py            # GET /api/cities
-    ├── review_queue.py       # GET /api/review-queue
-    └── bookings.py            # GET /api/bookings
+    ├── stats.py             # GET /api/stats
+    ├── leads.py              # GET /api/leads, GET /api/leads/{lead_id}
+    ├── cities.py              # GET /api/cities
+    ├── review_queue.py         # GET /api/review-queue
+    └── bookings.py              # GET /api/bookings
 
 frontend/
 ├── src/
@@ -43,6 +44,12 @@ frontend/
 │   └── pages/                       # one page per route, composed from the above
 └── ...
 ```
+
+`backend/scheduler.py` shares this package but is not part of this
+dashboard: it's a separate, long-running process that drives the four agents
+in `agents/` on a timer, and it is the only thing in `backend/` that writes.
+Everything else here is strictly read-only. See
+[README](README.md#running-unattended-the-scheduler) for running it.
 
 ## Prerequisites
 
@@ -131,7 +138,7 @@ All read-only, all under `/api`:
   `backend/db.py` opens every pooled connection with
   `SET default_transaction_read_only = on`, so a write anywhere in this
   codebase would fail at the database level, not just "isn't wired up yet."
-- **`storm_context` has two real shapes.** `lead_find_agent.py` writes
+- **`storm_context` has two real shapes.** `agents/lead_find_agent.py` writes
   `{city, condition_text, wind_mph, date}`; `db/generate_data.py`'s synthetic
   seed writes `{zip, hail_in, wind_mph, date}`. `backend/storm.py` normalizes
   both into one `StormSummary` (condition_text, wind_mph, hail_in, date, zip,
@@ -148,7 +155,7 @@ All read-only, all under `/api`:
   read, rather than failing the whole request.
 - **Approve / Reject / Rewrite are disabled placeholders, on purpose.** This
   build is display-only for the review queue; resolving a paused run still
-  goes through `uv run python lead_find_agent.py --review`, exactly as
+  goes through `uv run python -m agents.lead_find_agent --review`, exactly as
   documented in the main README's [human-review section](README.md#the-human-review-safety-gate).
 - **Polling, not websockets.** `/api/stats`, `/api/leads` and
   `/api/review-queue` poll every ~12s via TanStack Query's `refetchInterval`,

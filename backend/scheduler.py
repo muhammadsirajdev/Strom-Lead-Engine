@@ -1,4 +1,8 @@
-"""Runs the StormLead pipeline unattended.
+"""Runs the StormLead pipeline unattended -- the backend's writing half.
+
+Sits alongside the read-only dashboard API in this package but runs as its
+own process: `main.py` serves HTTP and never writes, this drives the four
+agents in `agents/` on a timer and is the only thing here that does.
 
 - lead_find_agent: once a day, checks every service city for storms and
   drafts outreach for any qualifying leads.
@@ -16,10 +20,10 @@ fresh Composio Calendly session (and another open Postgres connection) every
 lead_find_agent's human-review gate is untouched: a scheduled run drafts
 emails and pauses at the same LangGraph interrupt an interactive run hits --
 nothing sends automatically. Resolve whatever's pending anytime with:
-    uv run python lead_find_agent.py --review
+    uv run python -m agents.lead_find_agent --review
 
-Usage:
-    uv run python scheduler.py
+Usage (from the project root):
+    uv run python -m backend.scheduler
 """
 
 import asyncio
@@ -29,26 +33,12 @@ import uuid
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-import close_stale_leads as csl
-import lead_find_agent as lfa
-import notify_booking_with_team as nbt
-import send_booking_agent as sba
-from mcp_client import build_checkpointer, build_mcp_client, get_required_tools
-
-# Cities StormLead actively monitors -- must match the metros customers were
-# seeded into (db/generate_data.py's METROS).
-SERVICE_CITIES = [
-    "Dallas",
-    "Houston",
-    "Austin",
-    "San Antonio",
-    "Denver",
-    "Colorado Springs",
-    "Tampa",
-    "Orlando",
-    "Miami",
-    "Jacksonville",
-]
+from agents import close_stale_leads as csl
+from agents import lead_find_agent as lfa
+from agents import notify_booking_with_team as nbt
+from agents import send_booking_agent as sba
+from agents.config import SERVICE_CITIES
+from agents.runtime import build_checkpointer, build_mcp_client, get_required_tools
 
 # A dedicated handler/level for just this logger, rather than
 # logging.basicConfig() -- some already-imported dependency (langchain/mcp)
@@ -86,9 +76,9 @@ async def build_pipeline() -> dict:
 
 
 async def run_lead_find_agent(lead_find_graph) -> None:
-    """lead_find_agent.py -- kicks off one pass and returns immediately. If
-    it pauses at human_review, the thread is left recorded for a later
-    `lead_find_agent.py --review` pass; nothing sends unattended.
+    """agents/lead_find_agent.py -- kicks off one pass and returns
+    immediately. If it pauses at human_review, the thread is left recorded
+    for a later `--review` pass; nothing sends unattended.
     """
     try:
         result, thread_id = await lfa.run_once(lead_find_graph, SERVICE_CITIES)
@@ -99,7 +89,8 @@ async def run_lead_find_agent(lead_find_graph) -> None:
     if "__interrupt__" in result:
         pending = len(result["__interrupt__"][0].value["drafts"])
         logger.info(
-            "lead_find_agent: %d draft(s) awaiting review (thread %s) -- run: python lead_find_agent.py --review",
+            "lead_find_agent: %d draft(s) awaiting review (thread %s) -- "
+            "run: python -m agents.lead_find_agent --review",
             pending,
             thread_id,
         )
@@ -110,7 +101,7 @@ async def run_lead_find_agent(lead_find_graph) -> None:
 
 
 async def run_send_booking_agent(send_booking_graph) -> None:
-    """send_booking_agent.py -- triages Gmail replies across every
+    """agents/send_booking_agent.py -- triages Gmail replies across every
     non-terminal tracking row and invites newly-interested leads to book."""
     try:
         config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -125,7 +116,7 @@ async def run_send_booking_agent(send_booking_graph) -> None:
 
 
 async def run_notify_booking_with_team(notify_booking_graph) -> None:
-    """notify_booking_with_team.py -- checks for new Calendly bookings and
+    """agents/notify_booking_with_team.py -- checks for new Calendly bookings and
     notifies the team on Slack."""
     try:
         config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -140,7 +131,7 @@ async def run_notify_booking_with_team(notify_booking_graph) -> None:
 
 
 async def run_close_stale_leads() -> None:
-    """close_stale_leads.py -- closes leads that went quiet for a week."""
+    """agents/close_stale_leads.py -- closes leads that went quiet for a week."""
     try:
         closed = await csl.close_stale_leads()
     except Exception:

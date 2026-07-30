@@ -19,7 +19,7 @@ export type Severity = "severe" | "elevated" | "calm" | "unknown";
 
 /**
  * Normalized `tracking.storm_context`. Two producers write that JSONB with
- * different shapes -- lead_find_agent.py writes
+ * different shapes -- agents/lead_find_agent.py writes
  * {city, condition_text, wind_mph, date} and db/generate_data.py writes
  * {zip, hail_in, wind_mph, date} -- so every field here is nullable and the
  * backend fills in `severity` + `label` for both.
@@ -144,7 +144,7 @@ export interface ReviewDraft {
   to_email: string;
   subject: string;
   body: string;
-  /** EmailDraft.status in lead_find_agent.py. */
+  /** EmailDraft.status in agents/lead_find_agent.py. */
   status: string;
   feedback: string | null;
   storm: StormSummary;

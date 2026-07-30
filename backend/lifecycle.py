@@ -1,7 +1,7 @@
 """The `tracking.status` lifecycle, as the pipeline actually defines it.
 
 Mirrors the CHECK constraint in `db/schema.sql` and the terminal/non-terminal
-split that `send_booking_agent.py` polls on. Kept in one place so the funnel
+split that `agents/send_booking_agent.py` polls on. Kept in one place so the funnel
 maths and the pipeline board can't drift apart.
 """
 
@@ -17,7 +17,7 @@ STATUSES: Final[tuple[str, ...]] = (
     "unsubscribed",
 )
 
-# send_booking_agent.py keeps polling a thread in a non-terminal status (so a
+# agents/send_booking_agent.py keeps polling a thread in a non-terminal status (so a
 # change-of-mind reply after "not interested" is still picked up) and stops
 # once it reaches a terminal one.
 NON_TERMINAL: Final[frozenset[str]] = frozenset({"awaiting_reply", "interested", "not_interested"})

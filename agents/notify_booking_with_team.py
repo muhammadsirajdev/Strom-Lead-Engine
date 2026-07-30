@@ -1,6 +1,6 @@
 """StormLead -- Run C: check Calendly bookings -> notify the team on Slack -> save.
 
-For every customer already invited by send_booking_agent.py (status
+For every customer already invited by agents/send_booking_agent.py (status
 'interested', nudge_count > 0) who hasn't booked yet, polls Calendly (via
 the Composio Calendly agent) for a scheduled event. Newly-booked customers
 get one Slack message each in #leads-only, and only bookings that post
@@ -8,8 +8,8 @@ successfully get persisted as `tracking.status = 'booked'` -- one that fails
 to notify stays 'interested' and gets picked up (and re-notified) next run,
 instead of silently being marked booked without ever alerting the team.
 
-Usage:
-    uv run python notify_booking_with_team.py [customer_id ...]
+Usage (from the project root):
+    uv run python -m agents.notify_booking_with_team [customer_id ...]
 """
 
 import asyncio
@@ -24,7 +24,7 @@ import psycopg
 from langgraph.graph import END, START, StateGraph
 from psycopg.rows import dict_row
 
-from mcp_client import (
+from .runtime import (
     build_checkpointer,
     build_composio_calendly_agent,
     build_mcp_client,
@@ -57,7 +57,7 @@ class NotifyState(TypedDict):
 
 async def ensure_notify_columns() -> None:
     """Idempotent migration for the one column this graph needs beyond what
-    lead_find_agent.py's ensure_tracking_table already creates on `tracking`
+    agents/lead_find_agent.py's ensure_tracking_table already creates on `tracking`
     (db/schema.sql). Safe to call on every run.
     """
     ddl = "ALTER TABLE tracking ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;"

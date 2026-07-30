@@ -118,7 +118,7 @@ export function LeadsTable({
                 hint={
                   <span className="space-y-1.5">
                     <span className="block">
-                      Run a storm check: <CommandHint>uv run python lead_find_agent.py Dallas</CommandHint>
+                      Run a storm check: <CommandHint>uv run python -m agents.lead_find_agent Dallas</CommandHint>
                     </span>
                     <span className="block">
                       Or seed synthetic leads: <CommandHint>uv run python db/generate_data.py</CommandHint>{" "}

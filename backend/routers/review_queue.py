@@ -2,7 +2,7 @@
 
 Read-only by design: this build exposes what is waiting, and the dashboard
 renders Approve/Reject/Rewrite as disabled placeholders. Resolving a review
-still happens through `uv run python lead_find_agent.py --review`.
+still happens through `uv run python -m agents.lead_find_agent --review`.
 """
 
 from fastapi import APIRouter

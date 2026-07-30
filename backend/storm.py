@@ -2,7 +2,7 @@
 
 Two different producers write this JSONB column, and they do not agree:
 
-1. `lead_find_agent.py` (`StormContext`, what a real pipeline run writes):
+1. `agents/lead_find_agent.py` (`StormContext`, what a real pipeline run writes):
        {"city", "condition_text", "wind_mph", "date"}
 2. `db/generate_data.py` (synthetic seed data):
        {"zip", "hail_in", "wind_mph", "date"}
@@ -13,7 +13,7 @@ dashboard never trusts `storm_context.city` for grouping -- it joins through
 `customers.city`, which is always present -- and treats every other field as
 optional.
 
-Severity mirrors `lead_find_agent.py`'s own qualification rule so "severe" on
+Severity mirrors `agents/lead_find_agent.py`'s own qualification rule so "severe" on
 the dashboard means the same thing it means to the pipeline: a storm
 condition, or wind at/over WIND_THRESHOLD_MPH.
 """
@@ -60,7 +60,7 @@ def _coerce_float(value: Any) -> float | None:
 
 
 def classify_severity(condition_text: str | None, wind_mph: float | None, hail_in: float | None) -> Severity:
-    """Grades one storm context. `severe` matches lead_find_agent.py's own
+    """Grades one storm context. `severe` matches agents/lead_find_agent.py's own
     "this city qualifies for outreach" rule (storm condition OR wind >=
     threshold), extended with hail for synthetic rows.
     """

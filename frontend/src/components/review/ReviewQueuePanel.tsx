@@ -29,7 +29,7 @@ import type { ReviewDraft, ReviewQueue, ReviewThread } from "@/types/api";
  * backend reads back through AsyncPostgresSaver.
  *
  * Approve / Reject / Rewrite are rendered as disabled placeholders on purpose:
- * resolving a review is still done by `lead_find_agent.py --review`, and a
+ * resolving a review is still done by `python -m agents.lead_find_agent --review`, and a
  * button that looks live but isn't would be worse than one that says so.
  */
 
@@ -184,7 +184,7 @@ function ThreadCard({ thread }: { thread: ReviewThread }) {
               </p>
               <p className="mt-1">
                 The run is still listed in <code className="font-mono">run_a_pending_review</code>, so it will
-                be picked up by <CommandHint>lead_find_agent.py --review</CommandHint>.
+                be picked up by <CommandHint>python -m agents.lead_find_agent --review</CommandHint>.
               </p>
             </div>
           </div>
@@ -228,10 +228,10 @@ export function ReviewQueuePanel({
         hint={
           <span className="space-y-1.5">
             <span className="block">
-              Kick off a run: <CommandHint>uv run python lead_find_agent.py Dallas</CommandHint>
+              Kick off a run: <CommandHint>uv run python -m agents.lead_find_agent Dallas</CommandHint>
             </span>
             <span className="block">
-              Resolve what's waiting: <CommandHint>uv run python lead_find_agent.py --review</CommandHint>
+              Resolve what's waiting: <CommandHint>uv run python -m agents.lead_find_agent --review</CommandHint>
             </span>
           </span>
         }

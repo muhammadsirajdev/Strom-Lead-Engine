@@ -171,7 +171,7 @@ export function PipelineHealthCard({
                 <TooltipContent>
                   Threads in <code className="font-mono">run_a_pending_review</code>. Nothing sends until a
                   human resolves them with{" "}
-                  <code className="font-mono">lead_find_agent.py --review</code>.
+                  <code className="font-mono">python -m agents.lead_find_agent --review</code>.
                 </TooltipContent>
               </Tooltip>
 

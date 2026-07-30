@@ -6,14 +6,15 @@ over `WIND_THRESHOLD_MPH`), the city is passed to the `get_customers_by_city`
 DB tool to pull opted-in leads -> the personalizer drafts one email per lead
 -> a human reviews/approves/rejects/rewrites each draft via a LangGraph
 `interrupt` gate -> the sender sends only the approved emails and records a
-`tracking` row per send for Run B (send_booking_agent.py) to pick up later.
+`tracking` row per send for Run B (agents/send_booking_agent.py) to pick up
+later.
 
 If no city qualifies (no storm, or no opted-in customers), the run ends
 right after targeting instead of drafting anything.
 
-Usage:
-    uv run python lead_find_agent.py <city> [<city> ...]
-    uv run python lead_find_agent.py --review   # resolve any runs paused at human_review
+Usage (from the project root):
+    uv run python -m agents.lead_find_agent <city> [<city> ...]
+    uv run python -m agents.lead_find_agent --review   # resolve any runs paused at human_review
 """
 
 import asyncio
@@ -36,7 +37,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, model_validator
 
-from mcp_client import build_checkpointer, build_mcp_client, get_required_tools
+from .runtime import build_checkpointer, build_mcp_client, get_required_tools
 
 REQUIRED_TOOLS = ["get_current_weather", "gmail_send_email"]
 
@@ -438,7 +439,7 @@ def route_after_human_review(state: RunAState) -> str:
 # Runs once, after the human-review loop fully resolves (no drafts left with
 # status == pending). For each approved draft: sends it for real via the
 # `gmail_send_email` MCP tool, then upserts a `tracking` row keyed by the
-# resulting Gmail thread_id -- the handoff Run B (send_booking_agent.py)
+# resulting Gmail thread_id -- the handoff Run B (agents/send_booking_agent.py)
 # polls later. Rejected (and any leftover pending) drafts are skipped
 # entirely -- no Gmail action, no tracking row.
 # ---------------------------------------------------------------------------
@@ -478,7 +479,7 @@ async def ensure_tracking_table() -> None:
 # ---------------------------------------------------------------------------
 # Pending-review ledger
 #
-# A scheduled run (see scheduler.py) can't block on interactive input, so it
+# A scheduled run (see backend/scheduler.py) can't block on interactive input, so it
 # only ever kicks a run off (see run_once). If that run pauses at
 # human_review, its thread_id is recorded here so a later `--review` pass
 # (run anytime, by a human) can find and resolve it. Nothing sends until
@@ -664,7 +665,7 @@ async def run_once(graph, service_cities: list[str]) -> tuple[dict, str]:
     human_review, the thread is recorded in `run_a_pending_review` for a
     later `--review` pass (interactive, run by a human) to resolve; nothing
     sends until then. Used by both main()'s fresh-run path and by
-    scheduler.py's unattended daily job.
+    backend/scheduler.py's unattended daily job.
     """
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
@@ -692,7 +693,7 @@ async def _resolve_review_loop(graph, thread_id: str, result: dict) -> dict:
 async def review_pending_runs(graph) -> None:
     """`--review` mode: resumes every thread left paused at human_review --
     whether it was started interactively and interrupted (e.g. terminal
-    closed mid-review) or kicked off unattended by scheduler.py -- and walks
+    closed mid-review) or kicked off unattended by backend/scheduler.py -- and walks
     through the same approve/reject/rewrite CLI as a fresh run.
     """
     pending = await _list_pending_reviews()

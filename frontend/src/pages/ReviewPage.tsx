@@ -38,7 +38,7 @@ export function ReviewPage() {
         <p className="text-[0.8125rem] leading-relaxed text-ink-secondary">
           <span className="font-medium text-ink">Display only.</span> This build reads the queue; it can't
           resolve it. Approve, reject and rewrite decisions still go through{" "}
-          <code className="font-mono text-xs">uv run python lead_find_agent.py --review</code>, which walks
+          <code className="font-mono text-xs">uv run python -m agents.lead_find_agent --review</code>, which walks
           the same drafts in the terminal and resumes the paused graph.
         </p>
       </div>
