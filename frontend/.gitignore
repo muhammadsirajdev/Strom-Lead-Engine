@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Local env overrides (committed template is .env.example)
+.env.local
+.env.*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
