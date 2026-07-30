@@ -7,12 +7,53 @@ carries an interested reply all the way through to a booked inspection --
 triaging Gmail replies, sending a Calendly link, and alerting the team on
 Slack the moment someone books.
 
-It is four independent LangGraph pipelines plus one maintenance script, all
-sharing one Postgres database as their coordination point, and one scheduler
-that runs them unattended.
+It is four independent LangGraph pipelines, all sharing one Postgres database
+as their coordination point, one scheduler that runs them unattended, and a
+read-only operations dashboard over the whole thing.
+
+## The dashboard
+
+Five views over the same Postgres database the agents write to. Nothing here
+can mutate the pipeline -- the API's connection pool sets
+`default_transaction_read_only`, so writes are refused by Postgres itself.
+Build and run instructions are in [DASHBOARD.md](DASHBOARD.md).
+
+**1. Overview** — funnel conversion, pipeline health, and what needs
+attention, across every stage from storm detection to booked inspection.
+
+![Overview](docs/screenshots/01-overview.png)
+
+**2. Leads** — one row per `tracking` record joined to its customer, with the
+storm that triggered the outreach and the LLM's triage rationale. Selecting a
+row opens the full record including the raw `storm_context` JSONB.
+
+![Leads](docs/screenshots/02-leads.png)
+
+**3. Pipeline** — the four agents and their cadences across the top, and
+below them one column per `tracking.status`. This is the handoff diagram made
+literal: agents never call each other, they only write status.
+
+![Pipeline](docs/screenshots/03-pipeline.png)
+
+**4. Cities & weather** — the service area with the most recent storm context
+on file per city. Cities highlighted `Severe` are the ones Lead Find would
+target, using the same rule the agent itself applies.
+
+![Cities and weather](docs/screenshots/04-cities-weather.png)
+
+**5. Bookings** — leads that reached a booked inspection, with the appointment
+time Booking Notify recorded when it detected the Calendly event and posted to
+`#leads-only`.
+
+![Bookings](docs/screenshots/05-bookings.png)
+
+There is a sixth view, **Review queue**, which lists runs paused at the
+human-review gate along with their pending drafts. It is read-only in this
+build -- see [The human-review safety gate](#the-human-review-safety-gate).
 
 ## Table of contents
 
+- [The dashboard](#the-dashboard)
 - [Architecture](#architecture)
 - [Repository layout](#repository-layout)
 - [Prerequisites](#prerequisites)
@@ -109,7 +150,8 @@ schedules it, `frontend/` visualizes it.
 ├── db/
 │   ├── schema.sql                   # customers / tracking / gmail_credentials DDL
 │   └── generate_data.py             # synthetic customer + tracking seed data
-├── main.py                          # placeholder entry point from `uv init`, unused
+├── notebook/                        # exploration notebooks (dev only, not on any run path)
+├── docs/screenshots/                # dashboard screenshots used in this README
 ├── pyproject.toml / uv.lock         # dependencies (authoritative -- see Setup)
 ├── .env.example                     # env var template, copy to .env
 ├── DASHBOARD.md                     # ops dashboard: layout, run steps, endpoints
@@ -126,9 +168,10 @@ read-only dashboard API and never issues a write, while
 `backend/scheduler.py` is the process that actually drives the agents on a
 timer.
 
-`requirements.txt` is a stale, pre-`uv` artifact (references packages no
-longer used, like `langchain-groq` and `fastapi`) -- `pyproject.toml` +
-`uv.lock` are what's actually installed and maintained.
+`pyproject.toml` + `uv.lock` are the single source of truth for dependencies.
+Every runtime dependency listed there is imported by `agents/`, `backend/` or
+`db/`; the notebook toolchain (`ipykernel`, `langchain-groq`) is isolated in
+the `dev` dependency group so a production install never pulls it in.
 
 The pipeline itself (this README) is separate from the read-only **operations
 dashboard** (`backend/` + `frontend/`) that visualizes it -- see
@@ -151,7 +194,8 @@ dashboard** (`backend/` + `frontend/`) that visualizes it -- see
 
 1. **Install dependencies**
    ```bash
-   uv sync
+   uv sync --no-dev   # production: runtime dependencies only
+   uv sync            # development: also installs the notebook toolchain
    ```
 
 2. **Configure environment**
@@ -395,6 +439,8 @@ stage for real.
 
 ## Production checklist
 
+- [ ] Installed with `uv sync --no-dev` (the `dev` group is notebook-only
+      tooling and has no place in a production image)
 - [ ] `db/schema.sql` applied against a real (not synthetic) `customers`
       table, `marketing_opt_in` accurate per customer
 - [ ] All eight required env vars set (see

@@ -9,6 +9,16 @@ wheels/
 # Virtual environments
 .venv
 
+# Node / frontend build artifacts (frontend/.gitignore repeats these; kept
+# here too so nothing under frontend/ can be committed from the repo root)
+node_modules/
+*.tsbuildinfo
+
+# Tool caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
 # Environment variables / secrets
 .env
 *.env
