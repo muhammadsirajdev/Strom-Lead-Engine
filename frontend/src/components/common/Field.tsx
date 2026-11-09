@@ -16,7 +16,7 @@ export function Field({
 }) {
   return (
     <div className={cn("min-w-0 space-y-1", className)}>
-      <dt className="text-2xs font-medium uppercase tracking-wider text-ink-muted">{label}</dt>
+      <dt className="text-xs font-medium text-ink-muted">{label}</dt>
       <dd
         className={cn(
           "break-words text-[0.8125rem] leading-relaxed text-ink",

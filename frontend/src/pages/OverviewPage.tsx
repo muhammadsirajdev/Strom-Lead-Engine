@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { BookingsFeed } from "@/components/bookings/BookingsFeed";
@@ -6,11 +5,22 @@ import { CitiesPanel } from "@/components/cities/CitiesPanel";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LastUpdated } from "@/components/common/LastUpdated";
 import { SectionHeader } from "@/components/common/SectionHeader";
-import { FunnelChart } from "@/components/overview/FunnelChart";
-import { KpiRow } from "@/components/overview/KpiRow";
 import { PipelineHealthCard } from "@/components/overview/PipelineHealthCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusComposition } from "@/components/overview/StatusComposition";
+import { StormHero } from "@/components/overview/StormHero";
+import { Card, CardContent } from "@/components/ui/card";
 import { useBookings, useCities, useStats } from "@/hooks/useDashboardQueries";
+
+function SeeAll({ to, children }: { to: string; children: string }) {
+  return (
+    <Link
+      to={to}
+      className="rounded-md text-xs font-medium text-accent underline-offset-4 transition-colors hover:text-accent-hover hover:underline"
+    >
+      {children}
+    </Link>
+  );
+}
 
 export function OverviewPage() {
   const stats = useStats();
@@ -18,46 +28,36 @@ export function OverviewPage() {
   const bookings = useBookings(8);
 
   return (
-    <div className="space-y-8">
-      {/* KPI overview -------------------------------------------------- */}
-      <section className="space-y-3">
-        <SectionHeader
-          title="Pipeline at a glance"
-          description="Every lead the pipeline has created, by lifecycle status. Select a tile to open that slice of the leads table."
-          actions={<LastUpdated updatedAt={stats.dataUpdatedAt} isFetching={stats.isFetching} />}
-        />
-        {stats.isError ? (
-          <ErrorState error={stats.error} onRetry={() => void stats.refetch()} />
-        ) : (
-          <KpiRow stats={stats.data} loading={stats.isPending} />
-        )}
-      </section>
+    <div className="space-y-12">
+      {stats.isError ? (
+        <ErrorState error={stats.error} onRetry={() => void stats.refetch()} />
+      ) : (
+        <div className="space-y-3">
+          <StormHero stats={stats.data} cities={cities.data?.cities} loading={stats.isPending} />
+          <div className="flex justify-end px-1">
+            <LastUpdated updatedAt={stats.dataUpdatedAt} isFetching={stats.isFetching} />
+          </div>
+        </div>
+      )}
 
-      {/* Funnel + health ---------------------------------------------- */}
       {!stats.isError ? (
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-          <FunnelChart funnel={stats.data?.funnel} loading={stats.isPending} />
-          <PipelineHealthCard health={stats.data?.health} loading={stats.isPending} />
+        <section className="space-y-5">
+          <SectionHeader
+            title="Health of the pipeline"
+            description="Conversion between stages, and anything waiting on a person."
+          />
+          <div className="grid items-start gap-4 xl:grid-cols-2">
+            <StatusComposition stats={stats.data} loading={stats.isPending} />
+            <PipelineHealthCard health={stats.data?.health} loading={stats.isPending} />
+          </div>
         </section>
       ) : null}
 
-      {/* Cities & weather --------------------------------------------- */}
-      <section className="space-y-3">
+      <section className="space-y-5">
         <SectionHeader
           title="Cities & weather"
-          description="Latest storm context recorded per city, read from tracking.storm_context — not a live weather call."
-          actions={
-            <>
-              <LastUpdated updatedAt={cities.dataUpdatedAt} isFetching={cities.isFetching} />
-              <Link
-                to="/cities"
-                className="inline-flex items-center gap-1 text-2xs text-ink-muted transition-colors hover:text-accent"
-              >
-                All cities
-                <ArrowRight className="size-3" aria-hidden />
-              </Link>
-            </>
-          }
+          description="The latest storm the pipeline recorded for each city it serves."
+          actions={<SeeAll to="/cities">See all cities</SeeAll>}
         />
         {cities.isError ? (
           <ErrorState error={cities.error} onRetry={() => void cities.refetch()} />
@@ -66,36 +66,18 @@ export function OverviewPage() {
         )}
       </section>
 
-      {/* Bookings feed ------------------------------------------------ */}
-      <section className="space-y-3">
+      <section className="space-y-5">
         <SectionHeader
           title="Recent bookings"
-          description="Inspections that made it all the way through to a Calendly booking."
-          actions={
-            <>
-              <LastUpdated updatedAt={bookings.dataUpdatedAt} isFetching={bookings.isFetching} />
-              <Link
-                to="/bookings"
-                className="inline-flex items-center gap-1 text-2xs text-ink-muted transition-colors hover:text-accent"
-              >
-                All bookings
-                <ArrowRight className="size-3" aria-hidden />
-              </Link>
-            </>
+          description={
+            bookings.data
+              ? `${bookings.data.total} inspections booked through Calendly, ${bookings.data.upcoming_count} still upcoming.`
+              : "Inspections that made it all the way to a Calendly booking."
           }
+          actions={<SeeAll to="/bookings">See all bookings</SeeAll>}
         />
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>
-              {bookings.data ? `${bookings.data.total} booked` : "Booked inspections"}
-              {bookings.data?.upcoming_count ? (
-                <span className="ml-2 font-normal text-ink-muted">
-                  · {bookings.data.upcoming_count} upcoming
-                </span>
-              ) : null}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-5">
             {bookings.isError ? (
               <ErrorState error={bookings.error} onRetry={() => void bookings.refetch()} />
             ) : (

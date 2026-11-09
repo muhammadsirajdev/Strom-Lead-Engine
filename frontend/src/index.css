@@ -1,106 +1,108 @@
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/schibsted-grotesk";
+@import "@fontsource/barlow-condensed/500.css";
+@import "@fontsource/barlow-condensed/600.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /**
- * Design tokens.
+ * Design tokens -- "storm chart".
  *
- * Dark is the primary mode (it ships on <html class="dark">); light is a
- * selected companion, re-stepped for its own surface rather than an inverted
- * flip of the dark values.
+ * The palette borrows from meteorological charts rather than SaaS defaults:
+ * cool fog paper, storm-slate ink, a front-line cobalt for interaction, and a
+ * single lightning amber (--signal) reserved for live severe weather.
  *
- * The chart ramp is an *ordinal* single-hue blue ramp, chosen so the funnel
- * encodes magnitude without spending categorical hues, and validated against
- * each mode's real surface:
- *   dark  (surface #18181b): #86b6ef #3987e5 #256abf #184f95
- *   light (surface #fafafa): #86b6ef #3987e5 #256abf #104281
- * Both pass monotone lightness, >=0.06 adjacent lightness gaps, single-hue
- * spread (3 deg), and >=2:1 contrast for the step nearest the surface.
+ * Light is the primary mode; dark is a night-chart companion re-stepped for
+ * its own surface rather than an inverted flip.
  *
- * Status hues deliberately avoid the accent/chart blue so a lifecycle state
- * can never be mistaken for a data series. Statuses are always rendered with
- * a lucide icon plus a text label -- color never carries the meaning alone.
+ * The chart ramp is an ordinal single-hue cobalt ramp (monotone lightness) so
+ * the funnel encodes magnitude without spending categorical hues. Status hues
+ * avoid that cobalt so a lifecycle state never reads as a data series, and
+ * are always paired with an icon plus a text label.
  */
 @layer base {
   :root {
-    /* Light mode ------------------------------------------------------- */
-    --page: 0 0% 98%; /* #fafafa */
-    --surface: 0 0% 100%;
+    /* Light mode (primary) ------------------------------------------- */
+    --page: 206 18% 93%; /* #e9edf0 fog */
+    --surface: 200 20% 97.5%; /* #f7f9fa sheet */
     --surface-raised: 0 0% 100%;
-    --surface-inset: 240 5% 96%;
+    --surface-inset: 206 18% 89.5%;
 
-    --line: 240 6% 90%; /* zinc-200 */
-    --line-strong: 240 5% 84%;
+    --line: 207 16% 85%;
+    --line-strong: 208 13% 74%;
 
-    --ink: 240 6% 10%; /* zinc-900 */
-    --ink-secondary: 240 4% 34%; /* zinc-600 */
-    --ink-muted: 240 4% 46%; /* zinc-500 */
+    --ink: 210 35% 13%; /* #16222e storm slate */
+    --ink-secondary: 209 17% 29%;
+    --ink-muted: 209 12% 40%; /* #5a6773 graphite */
 
-    --accent: 212 68% 50%; /* #2a78d6 */
-    --accent-hover: 212 72% 44%;
-    --accent-soft: 212 74% 94%;
+    --accent: 217 51% 35%; /* #2c4f86 front-line cobalt */
+    --accent-hover: 217 56% 28%;
+    --accent-soft: 217 50% 92%;
     --accent-ink: 0 0% 100%;
 
-    --chart-1: 212 74% 73%; /* #86b6ef */
-    --chart-2: 212 76% 56%; /* #3987e5 */
-    --chart-3: 212 68% 45%; /* #256abf */
-    --chart-4: 212 78% 28%; /* #104281 */
+    --signal: 41 79% 50%; /* #e3a41b lightning -- live storms only */
 
-    --status-awaiting: 42 96% 42%;
-    --status-interested: 246 58% 52%;
-    --status-booked: 120 86% 28%;
-    --status-declined: 18 62% 48%;
-    --status-silent: 45 4% 44%;
-    --status-unsubscribed: 0 60% 46%;
+    --chart-1: 214 42% 74%;
+    --chart-2: 215 44% 56%;
+    --chart-3: 217 51% 40%;
+    --chart-4: 219 56% 25%;
 
-    --severity-severe: 0 60% 46%;
-    --severity-elevated: 42 96% 40%;
-    --severity-calm: 120 40% 34%;
-    --severity-unknown: 240 4% 46%;
+    --status-awaiting: 38 92% 38%;
+    --status-interested: 252 46% 52%;
+    --status-booked: 152 62% 29%;
+    --status-declined: 16 62% 46%;
+    --status-silent: 208 8% 47%;
+    --status-unsubscribed: 355 60% 45%;
 
-    --shadow: 240 20% 20%;
+    --severity-severe: 355 62% 46%;
+    --severity-elevated: 38 92% 38%;
+    --severity-calm: 152 40% 34%;
+    --severity-unknown: 209 10% 50%;
+
+    --shadow: 210 35% 13%;
   }
 
   .dark {
-    /* Dark mode (primary) --------------------------------------------- */
-    --page: 240 10% 4%; /* #09090b, zinc-950 */
-    --surface: 240 6% 10%; /* #18181b, zinc-900 -- the validated surface */
-    --surface-raised: 240 6% 13%;
-    --surface-inset: 240 6% 8%;
+    /* Dark mode (night chart) ---------------------------------------- */
+    --page: 210 33% 7%;
+    --surface: 210 30% 10.5%;
+    --surface-raised: 210 27% 13.5%;
+    --surface-inset: 210 34% 6%;
 
-    --line: 240 4% 16%; /* zinc-800 */
-    --line-strong: 240 5% 26%; /* zinc-700 */
+    --line: 210 22% 17%;
+    --line-strong: 210 17% 27%;
 
-    --ink: 0 0% 98%; /* zinc-50 */
-    --ink-secondary: 240 5% 65%; /* zinc-400 */
-    --ink-muted: 240 4% 46%; /* zinc-500 */
+    --ink: 205 28% 93%;
+    --ink-secondary: 207 15% 73%;
+    --ink-muted: 208 11% 57%;
 
-    --accent: 212 76% 56%; /* #3987e5 */
-    --accent-hover: 212 78% 64%;
-    --accent-soft: 212 76% 16%;
-    --accent-ink: 0 0% 100%;
+    --accent: 214 72% 70%;
+    --accent-hover: 214 80% 78%;
+    --accent-soft: 216 45% 18%;
+    --accent-ink: 210 35% 9%;
 
-    /* Ordinal ramp, brightest = largest stage on a dark surface. */
-    --chart-1: 212 74% 73%; /* #86b6ef */
-    --chart-2: 212 76% 56%; /* #3987e5 */
-    --chart-3: 212 68% 45%; /* #256abf */
-    --chart-4: 212 72% 34%; /* #184f95 */
+    --signal: 41 90% 58%;
 
-    --status-awaiting: 42 96% 54%; /* #fab219 */
-    --status-interested: 246 68% 72%; /* #9085e9 */
-    --status-booked: 120 86% 34%; /* #0ca30c */
-    --status-declined: 18 79% 64%; /* #ec835a */
-    --status-silent: 45 4% 52%; /* #898781 */
-    --status-unsubscribed: 0 60% 52%; /* #d03b3b */
+    /* Brightest step = largest stage on a dark surface. */
+    --chart-1: 214 70% 78%;
+    --chart-2: 214 62% 63%;
+    --chart-3: 216 52% 49%;
+    --chart-4: 218 50% 36%;
 
-    --severity-severe: 0 60% 52%;
-    --severity-elevated: 42 96% 54%;
-    --severity-calm: 120 40% 48%;
-    --severity-unknown: 240 4% 46%;
+    --status-awaiting: 40 90% 58%;
+    --status-interested: 250 70% 76%;
+    --status-booked: 150 52% 52%;
+    --status-declined: 18 79% 66%;
+    --status-silent: 208 9% 58%;
+    --status-unsubscribed: 356 72% 64%;
 
-    --shadow: 0 0% 0%;
+    --severity-severe: 356 72% 64%;
+    --severity-elevated: 40 90% 58%;
+    --severity-calm: 150 40% 52%;
+    --severity-unknown: 208 9% 52%;
+
+    --shadow: 210 50% 2%;
   }
 
   * {
@@ -108,16 +110,15 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
-  html:not(.dark) {
-    color-scheme: light;
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
     @apply bg-page text-ink antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;
   }
 
@@ -127,7 +128,17 @@
   }
 
   ::selection {
-    @apply bg-accent/30;
+    @apply bg-accent/25;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+    }
   }
 }
 

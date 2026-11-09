@@ -13,13 +13,24 @@ read-only operations dashboard over the whole thing.
 
 ## The dashboard
 
-Five views over the same Postgres database the agents write to. Nothing here
+Six views over the same Postgres database the agents write to. Nothing here
 can mutate the pipeline -- the API's connection pool sets
 `default_transaction_read_only`, so writes are refused by Postgres itself.
 Build and run instructions are in [DASHBOARD.md](DASHBOARD.md).
 
-**1. Overview** — funnel conversion, pipeline health, and what needs
-attention, across every stage from storm detection to booked inspection.
+The visual language is borrowed from weather charts rather than a stock admin
+kit: cool chart-paper surfaces, storm-slate ink, faint isobars behind the
+Overview, Barlow Condensed for headlines and figures (it reads like an
+instrument readout) over Schibsted Grotesk for the interface. A single
+lightning-amber accent is reserved for live severe weather. Light is the
+default; a matching night-chart dark theme is one click away in the top bar,
+or open any page with `?theme=dark`.
+
+**1. Overview** — opens with a sentence written from live data ("2 homeowners
+contacted after storms in 1 city. 2 inspections booked.") and a
+storm-to-booking ribbon whose thickness at each stage is that stage's lead
+count. Below it: where every lead stands, conversion rates, anything waiting
+on a person, the latest storm per city, and recent bookings.
 
 ![Overview](docs/screenshots/01-overview.png)
 
@@ -47,9 +58,18 @@ time Booking Notify recorded when it detected the Calendly event and posted to
 
 ![Bookings](docs/screenshots/05-bookings.png)
 
-There is a sixth view, **Review queue**, which lists runs paused at the
-human-review gate along with their pending drafts. It is read-only in this
-build -- see [The human-review safety gate](#the-human-review-safety-gate).
+**6. Review queue** — runs paused at the human-review gate, with their pending
+drafts. It is read-only in this build: decisions are still made from the
+terminal -- see [The human-review safety gate](#the-human-review-safety-gate).
+
+![Review queue](docs/screenshots/06-review-queue.png)
+
+**Dark theme** — the same Overview on the night-chart palette.
+
+![Overview, dark theme](docs/screenshots/07-overview-dark.png)
+
+Every view is responsive: below laptop width the sidebar folds into a
+scrolling section strip under the top bar.
 
 ## Table of contents
 

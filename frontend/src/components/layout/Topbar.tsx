@@ -1,7 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Database, Moon, RefreshCw, Sun, Zap } from "lucide-react";
+import { Database, Moon, RefreshCw, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+
+import { LogoMark } from "@/components/brand/Logo";
+import { NAV_ITEMS } from "@/components/layout/Sidebar";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +15,7 @@ import { cn } from "@/lib/utils";
 const TITLES: Record<string, { title: string; subtitle: string }> = {
   "/": {
     title: "Overview",
-    subtitle: "Pipeline health across every stage, from storm detection to booked inspection",
+    subtitle: "From storm detection to booked inspection",
   },
   "/leads": { title: "Leads", subtitle: "One row per tracking record — the outreach book of business" },
   "/pipeline": { title: "Pipeline", subtitle: "Where every lead currently sits in the status lifecycle" },
@@ -22,13 +25,17 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
 };
 
 function useTheme() {
-  const [dark, setDark] = useState(() => !document.documentElement.classList.contains("light"));
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
 
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle("dark", dark);
-    root.classList.toggle("light", !dark);
     root.dataset.theme = dark ? "dark" : "light";
+    try {
+      localStorage.setItem("stormlead-theme", dark ? "dark" : "light");
+    } catch {
+      // Storage can be blocked (private windows); the toggle still works per session.
+    }
   }, [dark]);
 
   return { dark, toggle: () => setDark((value) => !value) };
@@ -44,15 +51,13 @@ export function Topbar() {
   const dbDown = health.isError || health.data?.database === false;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-page/85 backdrop-blur">
-      <div className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 lg:px-8">
+    <header className="sticky top-0 z-30 border-b border-line bg-page/80 backdrop-blur-md">
+      <div className="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:px-10">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="flex size-7 items-center justify-center rounded-md bg-accent/12 text-accent lg:hidden">
-            <Zap className="size-4" aria-hidden />
-          </span>
+          <LogoMark className="size-7 shrink-0 lg:hidden" />
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold tracking-tight text-ink">{meta.title}</h1>
-            <p className="truncate text-2xs text-ink-muted">{meta.subtitle}</p>
+            <h1 className="truncate text-sm font-semibold leading-tight text-ink">{meta.title}</h1>
+            <p className="mt-0.5 truncate text-xs text-ink-muted">{meta.subtitle}</p>
           </div>
         </div>
 
@@ -81,7 +86,7 @@ export function Topbar() {
                 <div className="space-y-0.5">
                   <p className="text-ink">Read-only connection is healthy.</p>
                   <p>
-                    Checkpoint tables: {health.data?.checkpointer_tables ? "present" : "absent"} · Review
+                    Checkpoint tables: {health.data?.checkpointer_tables ? "present" : "absent"} Review
                     ledger: {health.data?.pending_review_table ? "present" : "absent"}
                   </p>
                 </div>
@@ -118,6 +123,28 @@ export function Topbar() {
           </Tooltip>
         </div>
       </div>
+
+      {/* Below lg the sidebar is hidden, so sections move into a scrolling strip. */}
+      <nav
+        className="scroll-subtle -mt-1 flex gap-1 overflow-x-auto px-4 pb-2.5 sm:px-6 lg:hidden"
+        aria-label="Sections"
+      >
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) =>
+              cn(
+                "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                isActive ? "bg-ink text-page" : "text-ink-secondary hover:bg-surface-inset hover:text-ink",
+              )
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
     </header>
   );
 }

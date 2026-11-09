@@ -83,7 +83,7 @@ function BookingRow({ booking, index }: { booking: Booking; index: number }) {
               <TooltipTrigger asChild>
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 tabular-nums",
+                    "inline-flex items-center gap-1.5",
                     booking.is_upcoming ? "text-status-booked" : "text-ink-secondary",
                   )}
                 >

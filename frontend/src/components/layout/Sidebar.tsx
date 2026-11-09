@@ -5,11 +5,11 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Users,
-  Zap,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-import { Badge } from "@/components/ui/badge";
+import { Wordmark } from "@/components/brand/Logo";
+import { PIPELINE_STAGES } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
 export interface NavCounts {
@@ -19,7 +19,7 @@ export interface NavCounts {
   severeCities?: number;
 }
 
-const NAV_ITEMS = [
+export const NAV_ITEMS = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true, count: undefined },
   { to: "/leads", label: "Leads", icon: Users, end: false, count: "leads" },
   { to: "/pipeline", label: "Pipeline", icon: Columns3, end: false, count: undefined },
@@ -28,23 +28,27 @@ const NAV_ITEMS = [
   { to: "/bookings", label: "Bookings", icon: CalendarCheck, end: false, count: "bookings" },
 ] as const;
 
+/** Counts that mean "a person should look" get a coloured chip; the rest stay neutral. */
+const COUNT_TONE: Partial<Record<keyof NavCounts, string>> = {
+  review: "bg-status-awaiting/15 text-status-awaiting",
+  severeCities: "bg-severity-severe/12 text-severity-severe",
+};
+
 export function Sidebar({ counts }: { counts: NavCounts }) {
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-surface lg:flex">
-      <div className="flex h-14 items-center gap-2.5 border-b border-line px-5">
-        <span className="flex size-7 items-center justify-center rounded-md bg-accent/12 text-accent">
-          <Zap className="size-4" aria-hidden />
-        </span>
-        <div className="min-w-0 leading-none">
-          <p className="truncate text-[0.8125rem] font-semibold tracking-tight text-ink">StormLead</p>
-          <p className="mt-1 truncate text-2xs text-ink-muted">Operations</p>
-        </div>
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-surface lg:flex">
+      <div className="px-6 pb-6 pt-6">
+        <Wordmark />
+        <p className="mt-2 text-xs leading-snug text-ink-muted">
+          Storm-triggered roofing outreach, run by four agents
+        </p>
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3" aria-label="Sections">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3" aria-label="Sections">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const badgeValue = item.count ? counts[item.count as keyof NavCounts] : undefined;
+          const key = item.count as keyof NavCounts | undefined;
+          const badgeValue = key ? counts[key] : undefined;
           const showBadge = typeof badgeValue === "number" && badgeValue > 0;
 
           return (
@@ -54,42 +58,31 @@ export function Sidebar({ counts }: { counts: NavCounts }) {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.8125rem] font-medium transition-colors",
+                  "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                   isActive
-                    ? "bg-accent/10 text-ink"
+                    ? "bg-ink font-medium text-page"
                     : "text-ink-secondary hover:bg-surface-inset hover:text-ink",
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  {/* Active rail: a second, non-colour cue alongside the tint. */}
-                  <span
-                    className={cn(
-                      "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full transition-colors",
-                      isActive ? "bg-accent" : "bg-transparent",
-                    )}
-                    aria-hidden
-                  />
                   <Icon
-                    className={cn("size-4 shrink-0", isActive ? "text-accent" : "text-ink-muted")}
+                    className={cn("size-4 shrink-0", isActive ? "text-page" : "text-ink-muted")}
                     aria-hidden
                   />
                   <span className="flex-1 truncate">{item.label}</span>
                   {showBadge ? (
-                    <Badge
-                      variant="token"
+                    <span
                       className={cn(
-                        "px-1.5 tabular-nums",
-                        item.count === "review"
-                          ? "border-status-awaiting/30 bg-status-awaiting/10 text-status-awaiting"
-                          : item.count === "severeCities"
-                            ? "border-severity-severe/30 bg-severity-severe/10 text-severity-severe"
-                            : "border-line-strong bg-surface-inset text-ink-muted",
+                        "min-w-6 rounded-full px-1.5 py-px text-center text-2xs font-semibold tabular-nums",
+                        isActive
+                          ? "bg-page/15 text-page"
+                          : ((key && COUNT_TONE[key]) ?? "bg-surface-inset text-ink-muted"),
                       )}
                     >
                       {badgeValue}
-                    </Badge>
+                    </span>
                   ) : null}
                 </>
               )}
@@ -98,9 +91,19 @@ export function Sidebar({ counts }: { counts: NavCounts }) {
         })}
       </nav>
 
-      <div className="border-t border-line p-4">
-        <p className="text-2xs leading-relaxed text-ink-muted">
-          Read-only console. Sends, triage and bookings are performed by the pipeline agents.
+      {/* The crew: what actually runs behind this read-only console. */}
+      <div className="border-t border-line px-6 py-5">
+        <p className="text-xs font-medium text-ink-secondary">Agents on schedule</p>
+        <ul className="mt-3 space-y-2">
+          {PIPELINE_STAGES.map((stage) => (
+            <li key={stage.key} className="flex items-baseline justify-between gap-3 text-xs">
+              <span className="text-ink">{stage.name}</span>
+              <span className="text-ink-muted">{stage.cadence}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-2xs leading-relaxed text-ink-muted">
+          This console is read-only. Every email is approved by a person before it sends.
         </p>
       </div>
     </aside>

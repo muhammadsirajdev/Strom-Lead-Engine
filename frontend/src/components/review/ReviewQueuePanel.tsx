@@ -123,12 +123,12 @@ function DraftCard({ draft, index }: { draft: ReviewDraft; index: number }) {
       <Separator className="my-3.5" />
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium uppercase tracking-wider text-ink-muted">Subject</p>
+        <p className="text-xs font-medium text-ink-muted">Subject</p>
         <p className="text-[0.8125rem] font-medium leading-snug text-ink">{draft.subject || "—"}</p>
       </div>
 
       <div className="mt-3 space-y-2">
-        <p className="text-2xs font-medium uppercase tracking-wider text-ink-muted">Generated body</p>
+        <p className="text-xs font-medium text-ink-muted">Generated body</p>
         <div className="scroll-subtle max-h-72 overflow-y-auto whitespace-pre-wrap rounded-md border border-line bg-surface px-3.5 py-3 text-[0.8125rem] leading-relaxed text-ink-secondary">
           {draft.body || "—"}
         </div>

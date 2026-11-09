@@ -1,14 +1,22 @@
 <!doctype html>
-<html lang="en" class="dark" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark light" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Apply the saved theme before first paint so there is no flash.
+      // ?theme=dark|light in the URL wins, so a shared link opens in that theme.
+      try {
+        var t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("stormlead-theme");
+        if (t === "dark") document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
     <meta
       name="description"
       content="StormLead operations console: storm-triggered roofing lead pipeline, from outreach through booked inspection."
     />
-    <title>StormLead · Operations</title>
+    <title>StormLead Operations</title>
   </head>
   <body>
     <div id="root"></div>

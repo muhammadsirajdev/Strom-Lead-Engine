@@ -153,7 +153,7 @@ export function PipelineHealthCard({
             </div>
 
             <div className="space-y-2 border-t border-line pt-4">
-              <p className="text-2xs font-medium uppercase tracking-wider text-ink-muted">Needs attention</p>
+              <p className="text-xs font-medium text-ink-muted">Needs attention</p>
 
               <Tooltip>
                 <TooltipTrigger asChild>

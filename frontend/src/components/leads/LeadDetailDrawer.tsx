@@ -103,7 +103,7 @@ export function LeadDetailDrawer({
                 {/* ---------------------------------------------------------- */}
                 <TabsContent value="overview" className="space-y-6">
                   <section className="space-y-3">
-                    <h3 className="flex items-center gap-2 text-2xs font-medium uppercase tracking-wider text-ink-muted">
+                    <h3 className="flex items-center gap-2 text-xs font-medium text-ink-muted">
                       <Shield className="size-3" aria-hidden />
                       Pipeline state
                     </h3>
@@ -148,7 +148,7 @@ export function LeadDetailDrawer({
                     <>
                       <Separator />
                       <section className="space-y-2">
-                        <h3 className="flex items-center gap-2 text-2xs font-medium uppercase tracking-wider text-ink-muted">
+                        <h3 className="flex items-center gap-2 text-xs font-medium text-ink-muted">
                           <MessageSquareQuote className="size-3" aria-hidden />
                           Triage rationale
                         </h3>
@@ -167,7 +167,7 @@ export function LeadDetailDrawer({
                   <Separator />
 
                   <section className="space-y-3">
-                    <h3 className="flex items-center gap-2 text-2xs font-medium uppercase tracking-wider text-ink-muted">
+                    <h3 className="flex items-center gap-2 text-xs font-medium text-ink-muted">
                       <Home className="size-3" aria-hidden />
                       Property &amp; account
                     </h3>
@@ -224,7 +224,7 @@ export function LeadDetailDrawer({
                   </FieldGrid>
 
                   <div className="space-y-2">
-                    <h3 className="text-2xs font-medium uppercase tracking-wider text-ink-muted">
+                    <h3 className="text-xs font-medium text-ink-muted">
                       Raw tracking.storm_context
                     </h3>
                     {query.isPending && !detail ? (

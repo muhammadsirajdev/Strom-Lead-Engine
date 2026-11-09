@@ -43,7 +43,7 @@ export function StatTile({
   const body = (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className="truncate text-2xs font-medium uppercase tracking-wider text-ink-muted">
+        <span className="truncate text-[0.8125rem] font-medium text-ink-secondary">
           {label}
         </span>
         {Icon ? <Icon className={cn("size-3.5 shrink-0", tone)} aria-hidden /> : null}
@@ -57,7 +57,7 @@ export function StatTile({
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
-          className="mt-2.5 text-3xl font-semibold leading-none tracking-tight text-ink"
+          className="mt-2 font-display text-[2.5rem] font-semibold leading-none text-ink"
         >
           {display}
         </motion.p>
@@ -74,7 +74,7 @@ export function StatTile({
       type="button"
       onClick={onClick}
       className={cn(
-        "group w-full rounded-lg border border-line bg-surface px-4 py-3.5 text-left shadow-card transition-colors",
+        "group w-full rounded-xl border border-line bg-surface px-4 py-3.5 text-left transition-colors",
         "hover:border-line-strong hover:bg-surface-raised",
         className,
       )}
@@ -82,7 +82,7 @@ export function StatTile({
       {body}
     </button>
   ) : (
-    <div className={cn("rounded-lg border border-line bg-surface px-4 py-3.5 shadow-card", className)}>
+    <div className={cn("rounded-xl border border-line bg-surface px-4 py-3.5", className)}>
       {body}
     </div>
   );

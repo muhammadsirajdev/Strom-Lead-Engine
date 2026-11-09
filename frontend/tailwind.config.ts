@@ -31,6 +31,7 @@ export default {
           secondary: "hsl(var(--ink-secondary) / <alpha-value>)",
           muted: "hsl(var(--ink-muted) / <alpha-value>)",
         },
+        signal: "hsl(var(--signal) / <alpha-value>)",
         accent: {
           DEFAULT: "hsl(var(--accent) / <alpha-value>)",
           hover: "hsl(var(--accent-hover) / <alpha-value>)",
@@ -65,27 +66,28 @@ export default {
       ringColor: { DEFAULT: "hsl(var(--accent))" },
       fontFamily: {
         sans: [
-          "InterVariable",
-          "Inter",
+          "Schibsted Grotesk Variable",
           "system-ui",
           "-apple-system",
           "Segoe UI",
           "sans-serif",
         ],
+        display: ["Barlow Condensed", "Arial Narrow", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.02em" }],
+        "2xs": ["0.71875rem", { lineHeight: "1rem", letterSpacing: "0.01em" }],
       },
       borderRadius: {
+        xl: "1rem",
         lg: "0.625rem",
         md: "0.5rem",
         sm: "0.375rem",
       },
       boxShadow: {
-        card: "0 1px 2px 0 hsl(var(--shadow) / 0.28)",
-        raised: "0 8px 24px -8px hsl(var(--shadow) / 0.45)",
-        overlay: "0 24px 60px -12px hsl(var(--shadow) / 0.6)",
+        card: "0 1px 0 0 hsl(var(--shadow) / 0.04)",
+        raised: "0 12px 32px -16px hsl(var(--shadow) / 0.28)",
+        overlay: "0 24px 60px -18px hsl(var(--shadow) / 0.38)",
       },
       keyframes: {
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },

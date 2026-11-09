@@ -38,8 +38,10 @@ frontend/
 │   │   └── useDashboardQueries.ts  # TanStack Query hooks, one per endpoint
 │   ├── components/
 │   │   ├── ui/                 # shadcn/ui primitives (button, card, table, sheet, ...)
+│   │   ├── brand/                # StormLead logo mark + wordmark
 │   │   ├── common/               # StatusBadge, SeverityBadge, EmptyState, StatTile, ...
-│   │   ├── overview/ cities/ pipeline/ leads/ review/ bookings/  # one dir per section
+│   │   ├── overview/             # StormHero (headline + funnel ribbon), StatusComposition, PipelineHealthCard
+│   │   ├── cities/ pipeline/ leads/ review/ bookings/  # one dir per section
 │   │   └── layout/                # Sidebar, Topbar, AppShell
 │   └── pages/                       # one page per route, composed from the above
 └── ...

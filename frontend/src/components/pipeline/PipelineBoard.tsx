@@ -99,13 +99,13 @@ export function PipelineBoard({ statusCounts, leads, total, loading }: PipelineB
               </div>
 
               <div className="flex items-end justify-between gap-2">
-                <span className="text-2xl font-semibold leading-none tracking-tight text-ink">{count}</span>
+                <span className="font-display text-[2rem] font-semibold leading-none text-ink">{count}</span>
                 <span className="text-2xs tabular-nums text-ink-muted">{formatPercent(share)}</span>
               </div>
 
-              <Badge variant="default" className="w-full justify-center">
-                {meta.writtenBy}
-              </Badge>
+              <p className="text-2xs text-ink-muted">
+                Set by <span className="font-medium text-ink-secondary">{meta.writtenBy}</span>
+              </p>
             </header>
 
             <div className="flex-1 space-y-1.5 p-2">

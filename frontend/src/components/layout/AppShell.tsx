@@ -27,7 +27,7 @@ export function AppShell() {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <main className="mx-auto w-full max-w-[100rem] flex-1 px-5 py-6 lg:px-8 lg:py-8">
+        <main className="mx-auto w-full max-w-[88rem] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
           <Outlet />
         </main>
       </div>
