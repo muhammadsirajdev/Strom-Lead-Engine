@@ -25,6 +25,13 @@ node_modules/
 .env.*
 !.env.example
 
+# Deployment: Vercel CLI project link, database dumps (contain customer
+# data and the Gmail refresh token). deploy/*.env is covered by *.env above.
+.vercel/
+*.dump
+*.sql.gz
+deploy/*.sql.bak
+
 # Jupyter
 .ipynb_checkpoints/
 

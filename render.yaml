@@ -1,0 +1,85 @@
+# Render Blueprint -- New > Blueprint in the Render dashboard, point it at this repo.
+#
+# Two services, both in Singapore to sit next to the Supabase database
+# (aws-1-ap-southeast-1):
+#   stormlead-api        read-only dashboard API (FastAPI), free web service
+#   stormlead-scheduler  runs the four agents on their schedule (background worker)
+#
+# Secrets are `sync: false`: Render asks for them on first deploy. Paste the
+# matching lines from deploy/render-api.env and deploy/render-scheduler.env.
+# See DEPLOYMENT.md for the full walkthrough.
+
+services:
+  - type: web
+    name: stormlead-api
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: .venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      # Supabase *session* pooler (port 5432). Not the transaction pooler
+      # (6543): the API pins each pooled connection read-only with a
+      # session-level SET, which transaction pooling would not keep.
+      - key: DATABASE_URL
+        sync: false
+      # Supabase's session pooler caps concurrent clients, and the scheduler
+      # needs some too. 4 is plenty for a dashboard that polls every 12s.
+      - key: DASHBOARD_POOL_MIN_SIZE
+        value: "1"
+      - key: DASHBOARD_POOL_MAX_SIZE
+        value: "4"
+      # Only needed if a browser calls this API directly. The Vercel frontend
+      # proxies /api through its own domain, so CORS never comes into play.
+      - key: DASHBOARD_CORS_ORIGINS
+        sync: false
+
+  # Background workers are not available on Render's free plan; Starter is the
+  # smallest. A free *web* service would sleep after 15 idle minutes and miss
+  # the daily runs, which is why the scheduler is a worker.
+  - type: worker
+    name: stormlead-scheduler
+    runtime: python
+    plan: starter
+    region: singapore
+    branch: main
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: .venv/bin/python -m backend.scheduler
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      # Cron times (Lead Find 08:00, Close Stale 08:30) are read in this zone.
+      # Render hosts run on UTC, so without it "08:00" fires overnight.
+      - key: SCHEDULER_TIMEZONE
+        value: America/Chicago
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: KLAVIS_GMAIL_MCP_URL
+        sync: false
+      - key: KLAVIS_SLACK_MCP_URL
+        sync: false
+      - key: KLAVIS_MCP_TOKEN
+        sync: false
+      - key: COMPOSIO_API_KEY
+        sync: false
+      - key: COMPOSIO_USER_ID
+        sync: false
+      # Optional: LangSmith traces of every agent run.
+      - key: LANGSMITH_TRACING
+        sync: false
+      - key: LANGSMITH_ENDPOINT
+        sync: false
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_PROJECT
+        sync: false

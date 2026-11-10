@@ -16,7 +16,8 @@ read-only operations dashboard over the whole thing.
 Six views over the same Postgres database the agents write to. Nothing here
 can mutate the pipeline -- the API's connection pool sets
 `default_transaction_read_only`, so writes are refused by Postgres itself.
-Build and run instructions are in [DASHBOARD.md](DASHBOARD.md).
+Build and run instructions are in [DASHBOARD.md](DASHBOARD.md); hosting on
+Supabase, Render and Vercel is covered in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 The visual language is borrowed from weather charts rather than a stock admin
 kit: cool chart-paper surfaces, storm-slate ink, faint isobars behind the
@@ -86,6 +87,7 @@ scrolling section strip under the top bar.
 - [External integrations](#external-integrations)
 - [Operational notes](#operational-notes)
 - [Production checklist](#production-checklist)
+- [Deployment (Supabase, Render, Vercel)](DEPLOYMENT.md)
 
 ## Architecture
 

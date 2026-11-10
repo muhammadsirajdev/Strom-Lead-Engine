@@ -23,11 +23,19 @@ nothing sends automatically. Resolve whatever's pending anytime with:
     uv run python -m agents.lead_find_agent --review
 
 Usage (from the project root):
-    uv run python -m backend.scheduler
+    uv run python -m backend.scheduler                  # run forever on the schedule
+    uv run python -m backend.scheduler --once lead_find  # run one job now, then exit
+
+Cron times are evaluated in SCHEDULER_TIMEZONE (an IANA name such as
+"America/Chicago"). Without it the host's local zone is used -- which is UTC
+on Render, so set it in production or "08:00" fires overnight for the
+service area.
 """
 
+import argparse
 import asyncio
 import logging
+import os
 import sys
 import uuid
 
@@ -141,10 +149,32 @@ async def run_close_stale_leads() -> None:
     logger.info("close_stale_leads: closed %d lead(s)", len(closed))
 
 
+def _jobs(pipeline: dict) -> dict:
+    """Job name -> zero-arg coroutine factory, shared by the schedule and --once."""
+    return {
+        "lead_find": lambda: run_lead_find_agent(pipeline["lead_find_graph"]),
+        "send_booking": lambda: run_send_booking_agent(pipeline["send_booking_graph"]),
+        "notify_booking": lambda: run_notify_booking_with_team(pipeline["notify_booking_graph"]),
+        "close_stale": run_close_stale_leads,
+    }
+
+
+JOB_NAMES = ("lead_find", "send_booking", "notify_booking", "close_stale")
+
+
+async def run_once(job: str) -> None:
+    """Runs a single job immediately and returns -- for smoke-testing a
+    deployment, or for driving the pipeline from an external cron."""
+    pipeline = await build_pipeline()
+    logger.info("running %s once", job)
+    await _jobs(pipeline)[job]()
+
+
 async def main() -> None:
     pipeline = await build_pipeline()
 
-    scheduler = AsyncIOScheduler()
+    timezone = os.getenv("SCHEDULER_TIMEZONE") or None
+    scheduler = AsyncIOScheduler(timezone=timezone) if timezone else AsyncIOScheduler()
     scheduler.add_job(
         run_lead_find_agent, "cron", hour=8, minute=0, args=[pipeline["lead_find_graph"]], id="lead_find_agent"
     )
@@ -158,8 +188,9 @@ async def main() -> None:
 
     scheduler.start()
     logger.info(
-        "scheduler started: lead_find_agent daily 08:00, send_booking_agent every 30min, "
-        "notify_booking_with_team hourly, close_stale_leads daily 08:30"
+        "scheduler started (%s): lead_find_agent daily 08:00, send_booking_agent every 30min, "
+        "notify_booking_with_team hourly, close_stale_leads daily 08:30",
+        scheduler.timezone,
     )
 
     try:
@@ -172,5 +203,9 @@ async def main() -> None:
 
 if __name__ == "__main__":
     # psycopg's async mode can't run on Windows' default ProactorEventLoop.
+    parser = argparse.ArgumentParser(description="Run the StormLead agents on a schedule.")
+    parser.add_argument("--once", choices=JOB_NAMES, help="run one job immediately, then exit")
+    args = parser.parse_args()
+
     loop_factory = asyncio.SelectorEventLoop if sys.platform == "win32" else None
-    asyncio.run(main(), loop_factory=loop_factory)
+    asyncio.run(run_once(args.once) if args.once else main(), loop_factory=loop_factory)

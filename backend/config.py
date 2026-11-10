@@ -45,7 +45,8 @@ class Settings:
         # Only consulted by `python -m backend.main`'s __main__ block below --
         # override when 8000 is already taken on the host.
         self.host: str = os.getenv("DASHBOARD_HOST", "127.0.0.1")
-        self.port: int = int(os.getenv("DASHBOARD_PORT", "8000"))
+        # Hosts like Render inject PORT; DASHBOARD_PORT still wins when set.
+        self.port: int = int(os.getenv("DASHBOARD_PORT") or os.getenv("PORT") or "8000")
 
 
 @lru_cache(maxsize=1)
