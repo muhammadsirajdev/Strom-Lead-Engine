@@ -110,12 +110,15 @@ def create_app() -> FastAPI:
     for router in (stats.router, leads.router, cities.router, review_queue.router, bookings.router):
         app.include_router(router, prefix="/api")
 
-    @app.get("/", include_in_schema=False)
+    @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
     async def root() -> RedirectResponse:
         """The bare domain has no page of its own; send visitors to the API docs."""
         return RedirectResponse(url="/docs")
 
-    @app.get("/api/health", response_model=HealthResponse, tags=["meta"], summary="Liveness + schema probe")
+    @app.api_route(
+        "/api/health",
+        methods=["GET", "HEAD"],
+        response_model=HealthResponse, tags=["meta"], summary="Liveness + schema probe")
     async def health() -> HealthResponse:
         try:
             await db.fetch_one("SELECT 1 AS ok")
