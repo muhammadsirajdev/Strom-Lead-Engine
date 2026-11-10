@@ -8,11 +8,14 @@ Read-only over the pipeline's Postgres database. Interactive docs at /docs.
 """
 
 import asyncio
+import logging
+import os
 import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from . import __version__, db
 from .config import get_settings
@@ -35,13 +38,48 @@ from .schemas import HealthResponse
 # of letting `uvicorn.run()`/`Server.run()` create the loop.
 
 
+logger = logging.getLogger("uvicorn.error")
+
+
+def _scheduler_enabled() -> bool:
+    return os.getenv("RUN_SCHEDULER", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+async def _start_embedded_scheduler(app: FastAPI) -> None:
+    """Starts the agent scheduler inside this process (RUN_SCHEDULER=true).
+
+    Runs as a background task so the API -- and its health check -- comes up
+    immediately; building the agent pipeline (MCP tools, Composio session,
+    checkpointer) takes several seconds. A failure here is logged and leaves
+    the read-only API fully working.
+
+    The agents open their own read-write connections; the API's pool stays
+    read-only. Only one process may run the scheduler, or every job would
+    fire twice -- so this is off by default and the API must run a single
+    uvicorn worker when it's on.
+    """
+    try:
+        from .scheduler import start_scheduler
+
+        app.state.scheduler = await start_scheduler()
+    except Exception:
+        logger.exception("embedded scheduler failed to start; the API keeps running without it")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Opens the shared connection pool once per process, closes it on exit."""
+    """Opens the shared connection pool once per process, closes it on exit.
+    Optionally runs the agent scheduler alongside (see RUN_SCHEDULER)."""
     await db.open_pool()
+    app.state.scheduler = None
+    starter = asyncio.create_task(_start_embedded_scheduler(app)) if _scheduler_enabled() else None
     try:
         yield
     finally:
+        if starter is not None:
+            starter.cancel()
+        if app.state.scheduler is not None:
+            app.state.scheduler.shutdown(wait=False)
         await db.close_pool()
 
 
@@ -71,6 +109,11 @@ def create_app() -> FastAPI:
 
     for router in (stats.router, leads.router, cities.router, review_queue.router, bookings.router):
         app.include_router(router, prefix="/api")
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> RedirectResponse:
+        """The bare domain has no page of its own; send visitors to the API docs."""
+        return RedirectResponse(url="/docs")
 
     @app.get("/api/health", response_model=HealthResponse, tags=["meta"], summary="Liveness + schema probe")
     async def health() -> HealthResponse:

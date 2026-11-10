@@ -3,17 +3,18 @@
 | Piece | Where | What runs |
 |---|---|---|
 | Database | Supabase (Postgres, `ap-southeast-1`) | `customers`, `tracking`, `gmail_credentials`, review ledger, LangGraph checkpoints |
-| Dashboard API | Render web service `stormlead-api` | `uvicorn backend.main:app` (read-only) |
-| Agents | Render background worker `stormlead-scheduler` | `python -m backend.scheduler` (all four agents on their cadence) |
+| API + agents | Render free web service `stormlead-api` | `uvicorn backend.main:app`: the read-only API, plus the four agents on their schedule (`RUN_SCHEDULER=true`) |
+| Keep-alive | cron-job.org (free) | pings `/api/health` every 10 min so the free service never sleeps |
 | Dashboard UI | Vercel, root directory `frontend/` | static Vite build; `/api/*` is proxied to Render |
 
 ```
-browser ──► Vercel (frontend/dist) ──/api/*──► Render stormlead-api ──┐
-                                                                      ├──► Supabase Postgres
-                     Render stormlead-scheduler (4 agents) ───────────┘
+browser ──► Vercel (frontend/dist) ──/api/*──► Render stormlead-api ──► Supabase Postgres
+                                               (API + 4 agents)
+cron-job.org ──every 10 min──► /api/health ─────────┘
 ```
 
-Both Render services sit in Singapore, next to the database.
+Everything runs on free plans. The Render service sits in Singapore, next to
+the database.
 
 ## 1. Database: Supabase
 
@@ -41,38 +42,55 @@ Starting from an empty database instead? Seed synthetic data with
 lockdown SQL. The agents create their own extra tables and columns on first
 start.
 
-## 2. Backend and agents: Render
+## 2. Backend and agents: Render (free)
 
 1. Render dashboard > **New > Blueprint**, then select this repo. Render reads
-   [`render.yaml`](render.yaml) and proposes both services.
-2. When it asks for the secret values, paste them in. For each service go to
-   **Environment > Add from .env** and paste the contents of:
-   - `deploy/render-api.env` into **stormlead-api**
-   - `deploy/render-scheduler.env` into **stormlead-scheduler**
-
-   These files are gitignored and already hold every value, including the
-   Supabase pooler URL.
+   [`render.yaml`](render.yaml) and proposes one free web service,
+   `stormlead-api`.
+2. Open **stormlead-api > Environment > Add from .env** and paste the contents
+   of `deploy/render-api.env`. That file is gitignored and already holds every
+   value, including the Supabase pooler URL and all agent keys.
 3. Deploy. Check `https://stormlead-api.onrender.com/api/health`: it should
-   return `"database": true`.
+   return `"database": true`. The logs should show
+   `scheduler started (America/Chicago): ...` a few seconds after startup.
+
+### Keeping it awake (free cron)
+
+Render puts free web services to sleep after 15 minutes without traffic, and
+a sleeping service runs no agents. Two things prevent that:
+
+- **The service pings itself** every 10 minutes (`KEEPALIVE_URL`), already
+  configured.
+- **An external cron, as a safety net.** It also wakes the service back up
+  if Render ever restarts it. At [cron-job.org](https://cron-job.org) (free):
+  **Create cronjob**, URL `https://stormlead-api.onrender.com/api/health`,
+  schedule **every 10 minutes**, save. UptimeRobot's free 5-minute monitor
+  works the same way.
+
+Render's free plan includes 750 instance-hours a month, enough for one
+service running 24/7. Because `/api/health` queries the database, the pings
+also stop Supabase from pausing a free project after 7 idle days.
 
 Things to know:
 
-- **Cost.** The API runs on the free plan. The scheduler is a background
-  worker, and Render has no free workers, so it uses Starter. A free web
-  service can't stand in for it, because it sleeps after 15 idle minutes and
-  would miss the daily runs.
 - **Schedule.** Lead Find runs daily at 08:00, Close Stale daily at 08:30,
   Reply Triage every 30 min, and Booking Notify hourly. Times are in
   `SCHEDULER_TIMEZONE` (America/Chicago; the service area is TX, CO and FL).
-- **Run an agent on demand.** From the worker's **Shell** tab:
-  `.venv/bin/python -m backend.scheduler --once lead_find` (or
-  `send_booking`, `notify_booking`, `close_stale`).
+- **One process only.** The start command pins uvicorn to one worker. More
+  workers, or a second service with `RUN_SCHEDULER=true`, would run every
+  agent job twice.
+- **Run an agent on demand.** From your machine (same database):
+  `uv run python -m backend.scheduler --once lead_find` (or `send_booking`,
+  `notify_booking`, `close_stale`).
 - **Human review still applies.** Lead Find drafts and then pauses; nothing
   sends until someone resolves it with
-  `uv run python -m agents.lead_find_agent --review`. That works from your
-  machine, because it uses the same Supabase database.
-- **Cold starts.** The free API sleeps when idle, so the first dashboard load
-  after a quiet spell takes 30-60 s. The frontend retries automatically.
+  `uv run python -m agents.lead_find_agent --review` on your machine.
+- **Free-tier limits.** 512 MB of memory and a shared CPU. Restarts and
+  redeploys reset the in-memory schedule, but the interval jobs simply start
+  counting again; nothing is lost because all state lives in Postgres.
+- **Paid alternative.** To split the agents into their own always-on process,
+  run `python -m backend.scheduler` as a Render background worker (Starter
+  plan) and drop `RUN_SCHEDULER` from the web service.
 
 ## 3. Frontend: Vercel
 

@@ -1,13 +1,18 @@
 # Render Blueprint -- New > Blueprint in the Render dashboard, point it at this repo.
 #
-# Two services, both in Singapore to sit next to the Supabase database
-# (aws-1-ap-southeast-1):
-#   stormlead-api        read-only dashboard API (FastAPI), free web service
-#   stormlead-scheduler  runs the four agents on their schedule (background worker)
+# One free web service, in Singapore next to the Supabase database
+# (aws-1-ap-southeast-1). It serves the read-only dashboard API *and* runs the
+# four agents on their schedule in the same process (RUN_SCHEDULER=true).
 #
-# Secrets are `sync: false`: Render asks for them on first deploy. Paste the
-# matching lines from deploy/render-api.env and deploy/render-scheduler.env.
-# See DEPLOYMENT.md for the full walkthrough.
+# Free web services sleep after 15 idle minutes, which would also pause the
+# agents. Two things keep it awake:
+#   - the scheduler pings KEEPALIVE_URL every 10 minutes, and
+#   - an external free cron (cron-job.org) hits the same URL every 10 minutes,
+#     which also wakes it back up after a restart. See DEPLOYMENT.md.
+# 750 free instance-hours a month covers one service running 24/7.
+#
+# Secrets are `sync: false`: paste them from deploy/render-api.env
+# (Environment > Add from .env).
 
 services:
   - type: web
@@ -17,49 +22,36 @@ services:
     region: singapore
     branch: main
     buildCommand: pip install uv && uv sync --frozen --no-dev
-    startCommand: .venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+    # Exactly one uvicorn worker: with RUN_SCHEDULER on, every worker would
+    # start its own scheduler and every agent job would run twice.
+    startCommand: .venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers --forwarded-allow-ips '*'
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.8
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # Run the agent scheduler inside this process.
+      - key: RUN_SCHEDULER
+        value: "true"
+      # Cron times (Lead Find 08:00, Close Stale 08:30) are read in this zone.
+      # Render hosts run on UTC, so without it "08:00" fires overnight.
+      - key: SCHEDULER_TIMEZONE
+        value: America/Chicago
+      - key: KEEPALIVE_URL
+        value: https://stormlead-api.onrender.com/api/health
       # Supabase *session* pooler (port 5432). Not the transaction pooler
       # (6543): the API pins each pooled connection read-only with a
       # session-level SET, which transaction pooling would not keep.
       - key: DATABASE_URL
         sync: false
-      # Supabase's session pooler caps concurrent clients, and the scheduler
-      # needs some too. 4 is plenty for a dashboard that polls every 12s.
+      # Supabase's session pooler caps concurrent clients, and the agents
+      # need some too. 4 is plenty for a dashboard that polls every 12s.
       - key: DASHBOARD_POOL_MIN_SIZE
         value: "1"
       - key: DASHBOARD_POOL_MAX_SIZE
         value: "4"
-      # Only needed if a browser calls this API directly. The Vercel frontend
-      # proxies /api through its own domain, so CORS never comes into play.
-      - key: DASHBOARD_CORS_ORIGINS
-        sync: false
-
-  # Background workers are not available on Render's free plan; Starter is the
-  # smallest. A free *web* service would sleep after 15 idle minutes and miss
-  # the daily runs, which is why the scheduler is a worker.
-  - type: worker
-    name: stormlead-scheduler
-    runtime: python
-    plan: starter
-    region: singapore
-    branch: main
-    buildCommand: pip install uv && uv sync --frozen --no-dev
-    startCommand: .venv/bin/python -m backend.scheduler
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.8
-      # Cron times (Lead Find 08:00, Close Stale 08:30) are read in this zone.
-      # Render hosts run on UTC, so without it "08:00" fires overnight.
-      - key: SCHEDULER_TIMEZONE
-        value: America/Chicago
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: DATABASE_URL
-        sync: false
+      # Agent secrets.
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENWEATHER_API_KEY
@@ -82,4 +74,8 @@ services:
       - key: LANGSMITH_API_KEY
         sync: false
       - key: LANGSMITH_PROJECT
+        sync: false
+      # Only needed if a browser calls this API directly. The Vercel frontend
+      # proxies /api through its own domain, so CORS never comes into play.
+      - key: DASHBOARD_CORS_ORIGINS
         sync: false
